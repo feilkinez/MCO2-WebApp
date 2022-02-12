@@ -1,0 +1,15 @@
+@import url("https://fonts.googleapis.com/css2?family=Prompt:wght@200;400;600&display=swap");
+
+body {
+  background-color: #faf8ec !important;
+}
+
+.title-movies {
+  font-family: Prompt;
+  font-weight: 600;
+}
+
+.navbar-text {
+  font-family: Prompt;
+  font-weight: 400;
+}

@@ -4,7 +4,148 @@
     <meta charset="UTF-8" />
     <meta http-equiv="X-UA-Compatible" content="IE=edge" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <link rel="stylesheet" href="styles.css" />
+    <link
+      href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css"
+      rel="stylesheet"
+      integrity="sha384-1BmE4kWBq78iYhFldvKuhfTAU6auU8tT94WrHftjDbrCEXSU1oBoqyl2QvZ6jIW3"
+      crossorigin="anonymous"
+    />
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
+    <script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.4.1/js/bootstrap.min.js"></script>
     <title>GRP19 MCO2</title>
   </head>
-  <body></body>
+  <body>
+    <nav class="navbar navbar-expand-lg navbar-light shadow-5-strong">
+      <div class="container-fluid">
+        <a
+          class="navbar-brand title-movies fs-3 text-decoration-underline"
+          href="#"
+          >Movies.DB</a
+        >
+        <button
+          class="navbar-toggler"
+          type="button"
+          data-bs-toggle="collapse"
+          data-bs-target="#navbarSupportedContent"
+          aria-controls="navbarSupportedContent"
+          aria-expanded="false"
+          aria-label="Toggle navigation"
+        >
+          <span class="navbar-toggler-icon"></span>
+        </button>
+        <div class="collapse navbar-collapse" id="navbarSupportedContent">
+          <ul class="navbar-nav me-auto mb-2 mb-lg-0">
+            <li class="nav-item px-5">
+              <a
+                class="nav-link active navbar-text"
+                aria-current="page"
+                href="#"
+                >Home</a
+              >
+            </li>
+
+            <li class="pe-5">
+              <!-- SEARCH FIELD -->
+              <form class="d-flex">
+                <input
+                  class="form-control me-2 navbar-text"
+                  type="search"
+                  placeholder="Search"
+                  aria-label="Search"
+                />
+
+                <!-- BUTTON FOR SEARCH-->
+                <button class="btn btn-outline-dark" type="submit">
+                  <?xml version="1.0"?><svg
+                    fill="#000000"
+                    xmlns="http://www.w3.org/2000/svg"
+                    viewBox="0 0 24 24"
+                    width="24px"
+                    height="24px"
+                  >
+                    <path
+                      d="M 9 2 C 5.1458514 2 2 5.1458514 2 9 C 2 12.854149 5.1458514 16 9 16 C 10.747998 16 12.345009 15.348024 13.574219 14.28125 L 14 14.707031 L 14 16 L 19.585938 21.585938 C 20.137937 22.137937 21.033938 22.137938 21.585938 21.585938 C 22.137938 21.033938 22.137938 20.137938 21.585938 19.585938 L 16 14 L 14.707031 14 L 14.28125 13.574219 C 15.348024 12.345009 16 10.747998 16 9 C 16 5.1458514 12.854149 2 9 2 z M 9 4 C 11.773268 4 14 6.2267316 14 9 C 14 11.773268 11.773268 14 9 14 C 6.2267316 14 4 11.773268 4 9 C 4 6.2267316 6.2267316 4 9 4 z"
+                    />
+                  </svg>
+                </button>
+              </form>
+            </li>
+
+            <li class="px-5">
+              <!-- BUTTON FOR ADD-->
+              <button class="btn btn-outline-dark navbar-text" type="submit">
+                <svg
+                  width="24"
+                  height="24"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  xmlns="http://www.w3.org/2000/svg"
+                  xmlns:xlink="http://www.w3.org/1999/xlink"
+                >
+                  <rect width="24" height="24" fill="url(#pattern0)" />
+                  <defs>
+                    <pattern
+                      id="pattern0"
+                      patternContentUnits="objectBoundingBox"
+                      width="1"
+                      height="1"
+                    >
+                      <use
+                        xlink:href="#image0_20_4"
+                        transform="scale(0.0111111)"
+                      />
+                    </pattern>
+                    <image
+                      id="image0_20_4"
+                      width="90"
+                      height="90"
+                      xlink:href="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAFoAAABaCAYAAAA4qEECAAAABmJLR0QA/wD/AP+gvaeTAAADu0lEQVR4nO2cPU8UURSGH9Swa6IxxkagNEijAktAocNW/QVqbSHQCda2GgmVyk/QmJgYgxZ+VH40CPhR2FkYExA12TVxXbNrcXfjOu7dvTNz587Hnic5xS6zZ955ubkz586ZAUEQBEEQBEEQBEEQBEEQBEEQBEEQBEEQBCFN5IA54CVQAmoSbaNU92oG6DU1eQBYS4D4tMbruodtyYnJVmKVDiN7LgEisxIXm43d4TH6rO4/IPjmXPOHHs8fi8Aed1oyTQnY2/jgNbqm+ZF3O+FfOvrmnTqEiBCjHSFGO0KMdoQY7Qgx2hFitCPEaEeI0Y4Qox0hRjtCjHaEGO0IMdoOvzptIEbb4QjwwM8PdLdlBDPOAB8x8E2MDs8B4CEe33bFoyUR5IApYBo4CgwBB1G38mrAD+Az8AHYAJ4CL4Byh7zbwCngSruNumFEjwHLwHf839n+BtwCCmFFZNnoAvAIe+0EK8BIUDFZNHo3sAT8xn7vRgVYBPJ+RWXN6CHU/Bp1s8waMOhHWJaMHgc2id7kRmyjTq5GZMXo46hmIFcmN6IITJgIzILRQ8AX3JvciC0MppG0G51Htc3GZXIjNlAnYS1pN3qJ4OaUgUtAXz3m698FzXe9ndA0G10g3CXcfIucCyHyVYBhndg0Gx22GOlrkfNgyJzaFb04ztR+Ykaje8xCbh1hclaBUfh/Pfpdmx0mAd0IueBUhTk9aLTNEv+o1cVbzcHkCLZA5GJE14CvQK93RC+jyskk8lzz/RSwz6UQn+wHJr1Gl4HTJNNs3bQ27VRFMKZb3TP8hCphZ1EL3SWnkvTopo5jTlUEIw0aO/KezvNkczFiCz9FjW6QpAqTdY1WxYgtTIqarQj37wyTEWVzJHsxKWp+dktfR5SP7+002SgLRhcNtjkf4f5NcptoTDymJ8MFoN/ifvvrObvmZHgPO5WnDhu572Zh6liPW4ABG1kw+lncAgx4ErcAG+RQHURJnTq2abGolEbKwJ24RbThNgb902mhQDJHdJUQbWNJZYVwprS69BsImfO+9aNMACOoG6JBTVlokfNyiHwVVDtwJlkkuDHNRY2fYkQXVyM+1ljJo16FFna+DhvrdGigyQKDqGXJuEzeBA5FfpQJYYL4mhzHHRxfooijbXfSyZElkEHcvAJ0lS6aLnTkUQ2HYS79dFEBrhHg0YosM4zqdKoS3uAqqhjJ7HWyDUaBm6gOoiDz8A0ClNXd/CrMXuAEcBLVd3EYdaO18T7RIn8f6HwDPAZeEXCB6A/nEmIhDwgSQwAAAABJRU5ErkJggg=="
+                    />
+                  </defs>
+                </svg>
+                ADD
+              </button>
+            </li>
+
+            <li class="px-5">
+              <!-- BUTTON FOR UPDATE-->
+              <button class="btn btn-outline-dark navbar-text" type="submit">
+                <svg
+                  width="24"
+                  height="24"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  xmlns="http://www.w3.org/2000/svg"
+                  xmlns:xlink="http://www.w3.org/1999/xlink"
+                >
+                  <rect width="24" height="24" fill="url(#pattern0)" />
+                  <defs>
+                    <pattern
+                      id="pattern0"
+                      patternContentUnits="objectBoundingBox"
+                      width="1"
+                      height="1"
+                    >
+                      <use
+                        xlink:href="#image0_20_6"
+                        transform="scale(0.0111111)"
+                      />
+                    </pattern>
+                    <image
+                      id="image0_20_6"
+                      width="90"
+                      height="90"
+                      xlink:href="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAFoAAABaCAYAAAA4qEECAAAABmJLR0QA/wD/AP+gvaeTAAAF1UlEQVR4nO2dS2wVVRjHf9LHvQg+cGGqENEuwIXP1CeCSaNJU42JIi5AEzTxEaNVgUVxpXGjCcbEvRubdOtjIQjqwgRFotKiCQYWPmhaDWgrtFCqYF18c2NznXPmzMyZc+YO55ec3NzTe8/8598zZ745rwuBQCAQCAQCgUAgUFIu8C0ghjbgpiitAlYD3cASYFn02gH8CfwNTABjwI/Ad8Bo9Ho2h4Ya8BqwGTgHDAGvAH/lKLMULAdeAD5EDJzPmU4AHwDPApen1FIDdsaU+XrWk/NNHXgU2I3UvrzmqtLZ6BgbgPYETSqT54Hx3GfsmKXANuSSL8pcVToKbAUWx+jSmdxILUE7sAX4HfcGx9XOZ5D7AZiZ3BJGrwUO4t/g5vRNpM3E5FxGFx11dAI7gIGUx5oB9gIHgMNROg5MAaeQmrgMuCx6vQq4DbgVuBlp/4ugjFEa3cDXpLucdwBrSL5p6egAeoF3kH+MzSugdPRifpJ7gD7+ay9tUgceBr401NJSRq8HzpAsehdyqbvifqQpqoTRT5AcEx8FHvKkbzHwQ4K+0hu9nmSTh5A42gc14KMEfaU3uheYRS3wNFLbfWHDZO9Gd6O/8U0Cd3lTZ2byPwl/9250J/oQbhy4zps6sye+nchDy2TC57wa/bZG1CTlN7klmo61qC+50/htLgDewq7JXoxuR9934fPG16CIzivnbNGIGfIhKIbj2DXZeX/0UtS15Rf8xcnN2G46nI+wbNOI8fXEF0cH8Cb5a/Y48AYSYTmjjnpkZJdLIVXnMdT/+Ts96qocu4k3eY9PUVVjOepOoz6PuirHi6hvFkV02leKRSk+e48ifxiZzROwQBvqHro1HnVVjluIN3kaiVcDCZg2HTco8vciEw0DCZgafa0i/1tbQqqOqdGrFfmHbQmpOqZGX63IP2JLSNUxNfoSRf5vtoRUHVOjL1LkT9sSEhDmiA/vnHYdtjJpngwDOTA1ekaRX5bRlNJjarSqLVa13YEmTI0+oci/wpaQqmNq9E+K/FW2hFQdU6NVT4CqJ8ZAE3mN7rElJCD0ELpJnaDr+Pc9x64lMG06zgGfK/5WpkkzcdSR8c79yPOAzdlLcWkG+ApZ217LInhAUfAE5R2cXYHfhaSjkYZUXIl6ukF/2sIcUKccq3VHyVCzP1YU9mnaghygmh7hIw2kFb9JU9gdaQsrmP34N7iR9qUVX0cmzMQVVrZpYdP4N7iRTmY5ga2aAjdkKbAgfJvbnFKzBPWc4zHK06Pn29jcRoP+RjOctVDL+DbWitHtwIim0CezFmyRoo07AwwCXVEaRD3kl9lokInnuuVv6/IUboGiTY57dtiu+U4udAtypoDr8x4gB65NBhkIKcToTvTx6gT+zHZtMhRoNMgsJt066in8NCOuTQZ4WfN9K9yNfhuJWeApWwczxLXJ/eh33rHGgyRvjDKMuzhbpWGO/0cLOoNsmGzVaIDHSTZ7DHjE9oFjUB1/MOazKqNsmWzdaJCarWtGGukTil2bqDpul+LzzYbZNLkQo0HabJONRuaBz4D7sD94oDqebi5KwzjbJhdmNMBKZEjHVMivSFy+jnyTJ+vAvZrjbE/4fj/2TZ4vegvIDmTB+kukm1B5CvgC2afuCLKF2jFkb+kZZAzzYmTu30okxLwRGa2/HbhQU/YcMs6Zde16P/A+GccDi6aHcnXEzwEPZDiPPszuP06bjmbakCGdYxmF2k4m7fBCUjcXTck5NeBpJMzzbbZpzc5Tk70Z3aAGbER28ipy6/m8NTtvTfZu9EK6gOeA94A/yH9SactQmW3L5MKjjiwsQiKIhT8Pcg0SZVyKRBqNnweZRcLCceB7JEo5APxM+lo0B7wKvBu93xy9txJdlNFoW5TmcoWwWMgZwWhHVNlo1UoyH5ysstGHfAtYwKEqG12W+SVQLi3WqSFTZn09CDXSCOfBUu4V+DV7BNnG7ryghnRm7cPNDNNp5HdfnmdBTf4XPSb4Y6g9d08AAAAASUVORK5CYII="
+                    />
+                  </defs>
+                </svg>
+                UPDATE
+              </button>
+            </li>
+          </ul>
+        </div>
+      </div>
+    </nav>
+  </body>
 </html>
