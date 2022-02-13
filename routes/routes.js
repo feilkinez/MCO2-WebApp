@@ -1,9 +1,9 @@
 const express = require(`express`);
+const app = express();
 
 const controller = require(`../controllers/controller`);
 
-const app = express();
-
 app.get(`/`, controller.getIndex);
+app.post(`/addEntry`, controller.addEntry);
 
 module.exports = app;

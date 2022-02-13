@@ -1,6 +1,7 @@
 const dotenv = require(`dotenv`);
 const path = require(`path`);
 const express = require(`express`);
+const bodyParser = require(`body-parser`);
 
 // Imports hbs
 const hbs = require(`hbs`);
@@ -9,6 +10,10 @@ const app = express();
 app.use(express.urlencoded({ extended: true }));
 app.set(`view engine`, `hbs`);
 app.use(express.static(path.join(__dirname, `public`)));
+app.use(bodyParser.json());
+app.use(bodyParser.urlencoded({ extended: false }));
+app.use(express.json());
+
 hbs.registerPartials(__dirname + `/views/partials`);
 
 dotenv.config();
