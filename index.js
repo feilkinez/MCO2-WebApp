@@ -18,15 +18,6 @@ hostname = process.env.HOSTNAME;
 // Import routes from /routes/routes.js
 const routes = require(`./routes/routes.js`);
 
-app.use(
-  session({
-    secret: process.env.secret,
-    resave: false,
-    saveUninitialized: true,
-    cookie: { maxAge: 7 * 60 * 60 * 24 },
-  })
-);
-
 app.use(`/`, routes);
 
 // Load error if page doesn't exist
