@@ -5,5 +5,6 @@ const controller = require(`../controllers/controller`);
 
 app.get(`/`, controller.getIndex);
 app.post(`/addEntry`, controller.addEntry);
+app.get(`/delEntry/:id`, controller.delEntry);
 
 module.exports = app;

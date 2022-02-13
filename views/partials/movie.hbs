@@ -3,7 +3,20 @@
   <td>{{name}}</td>
   <td>{{year}}</td>
   <td>{{rank}}</td>
-  <td><button type="button" class="btn btn-danger">
+  <td><a href="/delEntry/{{this.id}}" type="button" class="btn btn-danger">
       <img src="/assets/delete.svg" alt="trash icon" />
+    </a></td>
+  <td><button
+      type="button"
+      class="btn btn-warning"
+      data-bs-toggle="modal"
+      data-bs-target="#updateMod"
+    >
+      <img
+        src="/assets/Update.svg"
+        width="50%"
+        height="50%"
+        alt="update icon"
+      />
     </button></td>
 </tr>
