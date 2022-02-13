@@ -1,7 +1,6 @@
 const dotenv = require(`dotenv`);
 const path = require(`path`);
 const express = require(`express`);
-const session = require("express-session");
 
 // Imports hbs
 const hbs = require(`hbs`);
@@ -33,24 +32,6 @@ app.use(`/`, routes);
 // Load error if page doesn't exist
 app.use(function (req, res) {
   var details = {};
-
-  /*
-        checks if a user is logged-in by checking the session data
-        if a user is logged-in,
-        display the profile tab and logout tab in the nav bar.
-    */
-  // if(req.session.idnum) {
-  //     details.flag = true;
-  //     details.username = req.session.username;
-  //     details.idnum = req.session.idnum;
-  // }
-
-  /*
-        if no user is logged-in,
-        do not display the profile tab and the logout tab in the nav bar.
-    */
-  // else
-  //     details.flag = false;
 
   // render `../views/error.hbs`
   res.render("Error", details);
