@@ -1,27 +1,19 @@
+const db = require(`../models/db.js`);
+const mysql = require(`mysql`);
+
 const controller = {
-  // Open index.hbs
+  // Open index.hbs with movies
   getIndex: function (req, res) {
-    let movies = [];
+    db.query("SELECT * FROM movies", (err, movies) => {
+      db.end();
 
-    movies.push({
-      row: 1,
-      title: "The Thing",
-      year: "1982",
-      rating: "8.1"
+      if (!err) {
+        movies = movies.slice(0, 30);
+        res.render(`index`, { movies });
+      } else {
+        console.log(err);
+      }
     });
-
-    movies.push({
-      row: 2,
-      title: "Seven Samurai",
-      year: "1954",
-      rating: "8.6"
-    });
-
-    let content = {
-      movies: movies
-    };
-
-    res.render(`index`, content);
   },
 };
 
