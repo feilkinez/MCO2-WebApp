@@ -16,39 +16,6 @@ const controller = {
     });
   },
 
-  // // adds entry to db
-  // addEntry: async function (req, res) {
-  //   // select max id first
-  //   await new Promise((resolve) => {
-  //     db.query("SELECT MAX(id) AS maxID FROM movies", (err1, result1) => {
-  //       if (!err1) {
-  //         // res.send(result1);
-  //         const maxID = result1[0].maxID + 1;
-
-  //         const entry = {
-  //           id: maxID,
-  //           name: req.body.movieTitle,
-  //           year: req.body.movieYear,
-  //           rank: req.body.movieRate,
-  //         };
-
-  //         db.query("INSERT INTO movies SET ?", entry, (err2, result2) => {
-  //           if (!err2) {
-  //             res.redirect(`/`);
-  //             console.log(result2);
-  //             console.log("PART2");
-  //           } else {
-  //             console.log(err2);
-  //           }
-  //         });
-  //       } else {
-  //         console.log(err1);
-  //       }
-  //       resolve();
-  //     });
-  //   });
-  // },
-
   // adds entry to db
   addEntry: function (req, res) {
     // select max id first
