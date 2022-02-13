@@ -11,7 +11,11 @@ $(document).ready(function () {
         movieYear: movieYear,
         movieRate: movieRate,
       },
-      location.reload()
+      function (err) {
+        if (err) console.log(err);
+      }
     );
+
+    location.reload();
   });
 });
