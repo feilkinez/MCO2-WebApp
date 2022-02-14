@@ -16,6 +16,6 @@ $(document).ready(function () {
       }
     );
 
-    setInterval('location.reload()', 500);
+    setTimeout('location.reload()', 500);
   });
 });
