@@ -59,6 +59,22 @@ const controller = {
       }
     );
   },
+
+  updateEntry: function (req, res) {
+    const entry = {
+      name: req.body.updateTitle,
+      year: req.body.updateYear,
+      rank: req.body.updateRate,
+    };
+
+    db.query("UPDATE movies SET ? WHERE id=?", entry, [req.body.movieID], (err, result2) => {
+      if (!err) {
+        console.log(result2);
+      } else {
+        console.log(err);
+      }
+    });
+  },
 };
 
 module.exports = controller;
