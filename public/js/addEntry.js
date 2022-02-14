@@ -21,7 +21,7 @@ $(document).ready(function () {
 
   $(".updateBtn").click(function () {
     let id = $(this).attr("id");
-    let year = $(this).attr("year");
+    let year = $(this).attr("name");
 
     $("#hiddenID").val(id);
     $("#hiddenYear").val(year);

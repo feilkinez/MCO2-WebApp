@@ -114,6 +114,9 @@ const controller = {
     const initYear = req.body.initYear;
     const changeYear = req.body.changeYear;
 
+    console.log("------ Change: " + changeYear);
+    console.log("------ Init: " + initYear);
+
     let dbDest, dbSrc;
 
     if (changeYear < 1980) {
@@ -143,11 +146,12 @@ const controller = {
       }
     );
 
-    console.log("Change: " + changeYear)
-    console.log("Init: " + initYear)
     // node changes
-    if ((changeYear >= 1980 && initYear < 1980) || (changeYear < 1980 && initYear >= 1980)) {
-      console.log("CHANGED")
+    if (
+      (changeYear >= 1980 && initYear < 1980) ||
+      (changeYear < 1980 && initYear >= 1980)
+    ) {
+      console.log("CHANGED");
       // put in destination
       dbDest.query("INSERT INTO movies SET ?", addEntry, (err, result2) => {
         if (!err) {
@@ -173,7 +177,7 @@ const controller = {
     }
     // no changing of nodes required
     else {
-      console.log("NO CHANGE")
+      console.log("NO CHANGE");
       dbDest.query(
         "UPDATE movies SET ? WHERE id=?",
         [updateEntry, req.body.movieID],
