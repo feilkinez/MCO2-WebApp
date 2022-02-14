@@ -100,11 +100,87 @@ const controller = {
   },
 
   updateEntry: function (req, res) {
-    const entry = {
+    const addEntry = {
+      id: req.body.movieID,
       name: req.body.movieTitle,
-      year: req.body.movieYear,
+      year: req.body.changeYear,
       rank: req.body.movieRate,
     };
+
+    const updateEntry = {
+      name: req.body.movieTitle,
+      year: req.body.changeYear,
+      rank: req.body.movieRate,
+    };
+
+    const initYear = req.body.initYear;
+
+    // update node 1 regardless
+    db1.query(
+      "UPDATE movies SET ? WHERE id=?",
+      [updateEntry, req.body.movieID],
+      (err, result2) => {
+        if (!err) {
+          console.log(result2);
+        } else {
+          console.log(err);
+        }
+      }
+    );
+
+    // from node 2 to node 3 (<1980 - >=1980)
+    if (entry.year >= 1980 && initYear < 1980) {
+      // add to node 3
+      db3.query("INSERT INTO movies SET ?", addEntry, (err, result2) => {
+        if (!err) {
+          console.log(result2);
+        } else {
+          console.log(err);
+        }
+      });
+
+      // delete from node 2
+      db2.query(
+        "DELETE FROM movies WHERE id = ?",
+        [req.body.movieID],
+        (err, result) => {
+          if (!err) {
+            res.redirect(`/`);
+            console.log(result);
+          } else {
+            console.log(err);
+          }
+        }
+      );
+    }
+    // from node 3 to node 2 (>=1980 - <1980)
+    else if (entry.year < 1980 && initYear >= 1980) {
+      // add to node 2
+      db2.query("INSERT INTO movies SET ?", addEntry, (err, result2) => {
+        if (!err) {
+          console.log(result2);
+        } else {
+          console.log(err);
+        }
+      });
+
+      // delete from node 3
+      db3.query(
+        "DELETE FROM movies WHERE id = ?",
+        [req.body.movieID],
+        (err, result) => {
+          if (!err) {
+            res.redirect(`/`);
+            console.log(result);
+          } else {
+            console.log(err);
+          }
+        }
+      );
+    }
+    // no changing of nodes required
+    else {
+    }
 
     let dbConn;
 

@@ -16,19 +16,22 @@ $(document).ready(function () {
       }
     );
 
-    setTimeout('location.reload()', 500);
+    setTimeout("location.reload()", 500);
   });
 
-  $(".updateBtn").click(function() {
-    let id = $(this).attr('name');
+  $(".updateBtn").click(function () {
+    let id = $(this).attr("id");
+    let year = $(this).attr("year");
 
     $("#hiddenID").val(id);
+    $("#hiddenYear").val(year);
   });
 
-  $("#updateEntryBtn").click(function() {
+  $("#updateEntryBtn").click(function () {
     let id = $("#hiddenID").val();
     let title = $("#updateTitle").val().trim();
-    let year = $("#updateYear").val();
+    let initYear = $("#hiddenYear").val();
+    let changeYear = $("#updateYear").val();
     let rate = $("#updateRate").val();
 
     $.post(
@@ -36,7 +39,8 @@ $(document).ready(function () {
       {
         movieID: id,
         movieTitle: title,
-        movieYear: year,
+        initYear: initYear,
+        changeYear: changeYear,
         movieRate: rate,
       },
       function (err) {
@@ -44,6 +48,6 @@ $(document).ready(function () {
       }
     );
 
-    setTimeout('location.reload()', 500);
+    setTimeout("location.reload()", 500);
   });
 });
