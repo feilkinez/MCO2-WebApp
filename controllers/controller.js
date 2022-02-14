@@ -145,9 +145,9 @@ const controller = {
       }
     );
 
-    // from node 2 to node 3 (<1980 - >=1980)
+    // node changes
     if ((changeYear >= 1980 && initYear < 1980) || (changeYear < 1980 && initYear >= 1980)) {
-      // add to node 3
+      // put in destination
       dbDest.query("INSERT INTO movies SET ?", addEntry, (err, result2) => {
         if (!err) {
           console.log(result2);
@@ -156,7 +156,7 @@ const controller = {
         }
       });
 
-      // delete from node 2
+      // delete from source
       dbSrc.query(
         "DELETE FROM movies WHERE id = ?",
         [req.body.movieID],
