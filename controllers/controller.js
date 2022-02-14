@@ -114,6 +114,23 @@ const controller = {
     };
 
     const initYear = req.body.initYear;
+    const changeYear = req.body.changeYear;
+
+    let dbDest, dbSrc;
+
+    if (changeYear < 1980) {
+      dbDest = db2;
+      dbSrc = db2;
+    } else {
+      dbDest = db3;
+      dbSrc = db3;
+    }
+
+    if (initYear < 1980) {
+      dbSrc = db2;
+    } else {
+      dbSrc = db3;
+    }
 
     // update node 1 regardless
     db1.query(
@@ -129,9 +146,9 @@ const controller = {
     );
 
     // from node 2 to node 3 (<1980 - >=1980)
-    if (entry.year >= 1980 && initYear < 1980) {
+    if ((changeYear >= 1980 && initYear < 1980) || (changeYear < 1980 && initYear >= 1980)) {
       // add to node 3
-      db3.query("INSERT INTO movies SET ?", addEntry, (err, result2) => {
+      dbDest.query("INSERT INTO movies SET ?", addEntry, (err, result2) => {
         if (!err) {
           console.log(result2);
         } else {
@@ -140,32 +157,7 @@ const controller = {
       });
 
       // delete from node 2
-      db2.query(
-        "DELETE FROM movies WHERE id = ?",
-        [req.body.movieID],
-        (err, result) => {
-          if (!err) {
-            res.redirect(`/`);
-            console.log(result);
-          } else {
-            console.log(err);
-          }
-        }
-      );
-    }
-    // from node 3 to node 2 (>=1980 - <1980)
-    else if (entry.year < 1980 && initYear >= 1980) {
-      // add to node 2
-      db2.query("INSERT INTO movies SET ?", addEntry, (err, result2) => {
-        if (!err) {
-          console.log(result2);
-        } else {
-          console.log(err);
-        }
-      });
-
-      // delete from node 3
-      db3.query(
+      dbSrc.query(
         "DELETE FROM movies WHERE id = ?",
         [req.body.movieID],
         (err, result) => {
@@ -180,39 +172,18 @@ const controller = {
     }
     // no changing of nodes required
     else {
-    }
-
-    let dbConn;
-
-    if (entry.year < 1980) {
-      dbConn = db2;
-    } else {
-      dbConn = db3;
-    }
-
-    db1.query(
-      "UPDATE movies SET ? WHERE id=?",
-      [entry, req.body.movieID],
-      (err, result2) => {
-        if (!err) {
-          console.log(result2);
-        } else {
-          console.log(err);
+      dbDest.query(
+        "UPDATE movies SET ? WHERE id=?",
+        [updateEntry, req.body.movieID],
+        (err, result2) => {
+          if (!err) {
+            console.log(result2);
+          } else {
+            console.log(err);
+          }
         }
-      }
-    );
-
-    dbConn.query(
-      "UPDATE movies SET ? WHERE id=?",
-      [entry, req.body.movieID],
-      (err, result2) => {
-        if (!err) {
-          console.log(result2);
-        } else {
-          console.log(err);
-        }
-      }
-    );
+      );
+    }
   },
 };
 
