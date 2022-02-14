@@ -35,7 +35,7 @@ const controller = {
 
         let dbConn;
 
-        if (entry.year >= 1980) {
+        if (entry.year < 1980) {
           dbConn = db2;
         } else {
           dbConn = db3;
@@ -66,7 +66,7 @@ const controller = {
   delEntry: function (req, res) {
     let dbConn;
 
-    if (req.params.year >= 1980) {
+    if (req.params.year < 1980) {
       dbConn = db2;
     } else {
       dbConn = db3;
@@ -108,7 +108,7 @@ const controller = {
 
     let dbConn;
 
-    if (entry.year >= 1980) {
+    if (entry.year < 1980) {
       dbConn = db2;
     } else {
       dbConn = db3;
