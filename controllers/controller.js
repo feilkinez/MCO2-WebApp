@@ -8,9 +8,7 @@ const controller = {
   getIndex: function (req, res) {
     db1.query("SELECT * FROM movies ORDER BY id DESC", (err, movies) => {
       if (!err) {
-        console.log("PASOK KA DITO");
         movies = movies.slice(0, 10);
-        console.log(movies);
         res.render(`index`, { movies });
       } else {
         console.log(err);
@@ -145,8 +143,11 @@ const controller = {
       }
     );
 
+    console.log("Change: " + changeYear)
+    console.log("Init: " + initYear)
     // node changes
     if ((changeYear >= 1980 && initYear < 1980) || (changeYear < 1980 && initYear >= 1980)) {
+      console.log("CHANGED")
       // put in destination
       dbDest.query("INSERT INTO movies SET ?", addEntry, (err, result2) => {
         if (!err) {
@@ -172,6 +173,7 @@ const controller = {
     }
     // no changing of nodes required
     else {
+      console.log("NO CHANGE")
       dbDest.query(
         "UPDATE movies SET ? WHERE id=?",
         [updateEntry, req.body.movieID],
