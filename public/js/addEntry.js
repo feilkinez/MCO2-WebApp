@@ -18,4 +18,10 @@ $(document).ready(function () {
 
     setTimeout('location.reload()', 500);
   });
+
+  $(".updateBtn").click(function() {
+    let id = $(this).attr('name');
+
+    $("#hiddenID").val(id);
+  });
 });
