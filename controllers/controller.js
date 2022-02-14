@@ -62,12 +62,12 @@ const controller = {
 
   updateEntry: function (req, res) {
     const entry = {
-      name: req.body.updateTitle,
-      year: req.body.updateYear,
-      rank: req.body.updateRate,
+      name: req.body.movieTitle,
+      year: req.body.movieYear,
+      rank: req.body.movieRate,
     };
-
-    db.query("UPDATE movies SET ? WHERE id=?", entry, [req.body.movieID], (err, result2) => {
+    
+    db.query("UPDATE movies SET ? WHERE id=?", [entry, req.body.movieID], (err, result2) => {
       if (!err) {
         console.log(result2);
       } else {
