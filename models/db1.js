@@ -2,7 +2,6 @@
 
 const mysql = require("mysql");
 const dotenv = require("dotenv");
-const cont = require("../controllers/controller");
 
 dotenv.config();
 
