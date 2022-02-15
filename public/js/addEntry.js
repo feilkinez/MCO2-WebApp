@@ -16,7 +16,7 @@ $(document).ready(function () {
       }
     );
 
-    setTimeout("location.reload()", 500);
+    setTimeout("location.reload()", 1000);
   });
 
   $(".updateBtn").click(function () {

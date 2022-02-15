@@ -205,52 +205,63 @@ const controller = {
           loggerNode = "logger_n3";
         }
 
-        dbConn.query("SELECT MAX(id) as maxID FROM movies", (err, result) => {
+        db2.query("SELECT MAX(id) AS maxID FROM movies", (err, movies1) => {
           if (!err) {
-            const maxID = result[0].maxID + 1;
-
-            const entry = {
-              id: maxID,
-              name: req.body.movieTitle,
-              year: req.body.movieYear,
-              rank: req.body.movieRate,
-            };
-
-            dbConn.query("INSERT INTO movies SET ?", entry, (err, result2) => {
+            db3.query("SELECT MAX(id) AS maxID from movies", (err, movies2) => {
               if (!err) {
-                console.log(result2);
+                const id1 = movies1[0].maxID;
+                const id2 = movies2[0].maxID;
+
+                const maxID = id1 > id2 ? id1 + 1 : id2 + 1;
+
+                const entry = {
+                  id: maxID,
+                  name: req.body.movieTitle,
+                  year: req.body.movieYear,
+                  rank: req.body.movieRate,
+                };
 
                 dbConn.query(
-                  "SELECT MAX(log_id) AS maxID FROM " + loggerNode,
-                  (err, result) => {
+                  "INSERT INTO movies SET ?",
+                  entry,
+                  (err, result2) => {
                     if (!err) {
-                      const maxLogIDConn = result[0].maxID + 1;
+                      console.log(result2);
 
-                      const logdbConn = {
-                        log_id: maxLogIDConn,
-                        target_node: targetNode,
-                        operation: "INSERT",
-                        change_node: 0,
-                        is_replicated: 0,
-                        data_id: entry.id,
-                        data_name: entry.name,
-                        data_year: entry.year,
-                        data_rank: entry.rank,
-                      };
+                      dbConn.query(
+                        "SELECT MAX(log_id) AS maxID FROM " + loggerNode,
+                        (err, result) => {
+                          if (!err) {
+                            const maxLogIDConn = result[0].maxID + 1;
 
-                      let query = "INSERT INTO " + loggerNode + " SET ?";
-                      dbConn.query(query, logdbConn, (err, result2) => {
-                        if (!err) {
-                          console.log(result2);
-                        } else {
-                          console.log(err);
+                            const logdbConn = {
+                              log_id: maxLogIDConn,
+                              target_node: targetNode,
+                              operation: "INSERT",
+                              change_node: 0,
+                              is_replicated: 0,
+                              data_id: entry.id,
+                              data_name: entry.name,
+                              data_year: entry.year,
+                              data_rank: entry.rank,
+                            };
+
+                            let query = "INSERT INTO " + loggerNode + " SET ?";
+                            dbConn.query(query, logdbConn, (err, result2) => {
+                              if (!err) {
+                                console.log(result2);
+                              } else {
+                                console.log(err);
+                              }
+                            });
+                          }
                         }
-                      });
+                      );
+                    } else {
+                      console.log(err);
                     }
                   }
                 );
-              } else {
-                console.log(err);
               }
             });
           }
