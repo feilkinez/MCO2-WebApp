@@ -53,18 +53,16 @@ const controller = {
           rank: req.body.movieRate,
         };
 
-        let dbConn, targetNode, loggerNode, repNode;
+        let dbConn, targetNode, loggerNode;
 
         if (entry.year < 1980) {
           dbConn = db2;
           targetNode = "2";
           loggerNode = "logger_n2";
-          repNode = "is_replicated_n2";
         } else {
           dbConn = db3;
           targetNode = "3";
           loggerNode = "logger_n3";
-          repNode = "is_replicated_n2";
         }
 
         db1.query("INSERT INTO movies SET ?", entry, (err, result2) => {
@@ -192,7 +190,32 @@ const controller = {
           }
         );
       } else {
-        console.log(err);
+        const inputYear = req.body.movieYear;
+
+        let dbConn, targetNode, loggerNode;
+
+        // node 2
+        if (inputYear < 1980) {
+          dbConn = db2;
+          targetNode = "2";
+          loggerNode = "logger_n2";
+        } else {
+          dbConn = db3;
+          targetNode = "3";
+          loggerNode = "logger_n3";
+        }
+
+        dbConn.query("SELECT MAX(id) as maxID FROM movies", (err, result) => {
+          if (!err) {
+            const maxID = result[0].maxID + 1;
+
+            const entry = {
+              name: req.body.movieTitle,
+              year: req.body.movieYear,
+              rank: req.body.movieRate,
+            };
+          }
+        });
       }
     });
   },
