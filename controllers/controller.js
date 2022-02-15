@@ -3,6 +3,15 @@ const db1 = require(`../models/db1.js`);
 const db2 = require(`../models/db2.js`);
 const db3 = require(`../models/db3.js`);
 
+function maxLogID(db, loggerNode) {
+  db.query("SELECT MAX(log_id) AS maxID from ?", loggerNode, (err, result) => {
+    if (!err) {
+      const maxLogID = result[0].maxID + 1;
+      return maxLogID;
+    }
+  });
+}
+
 const controller = {
   // Open index.hbs with movies
   getIndex: function (req, res) {
@@ -11,7 +20,29 @@ const controller = {
         movies = movies.slice(0, 10);
         res.render(`index`, { movies });
       } else {
-        console.log(err);
+        db2.query("SELECT * FROM movies", (err, movies1) => {
+          if (!err) {
+            db3.query("SELECT * FROM movies", (err, movies2) => {
+              if (!err) {
+                let movies = movies1.concat(movies2);
+                movies.sort(function (a, b) {
+                  var id_a = a.id;
+                  var id_b = b.id;
+
+                  if (id_a < id_b) {
+                    return 1;
+                  }
+                  if (id_a > id_b) {
+                    return -1;
+                  }
+                  return 0;
+                });
+                movies = movies.slice(0, 10);
+                res.render(`index`, { movies });
+              }
+            });
+          }
+        });
       }
     });
   },
@@ -31,12 +62,18 @@ const controller = {
           rank: req.body.movieRate,
         };
 
-        let dbConn;
+        let dbConn, targetNode, loggerNode, repNode;
 
         if (entry.year < 1980) {
           dbConn = db2;
+          targetNode = "2";
+          loggerNode = "logger_n2";
+          repNode = "is_replicated_n2";
         } else {
           dbConn = db3;
+          targetNode = "3";
+          loggerNode = "logger_n3";
+          repNode = "is_replicated_n2";
         }
 
         db1.query("INSERT INTO movies SET ?", entry, (err, result2) => {
@@ -47,9 +84,71 @@ const controller = {
           }
         });
 
+        const maxLogID1 = maxLogID(db1, "logger_n1");
+
+        // log for node 1
+        const log1 = {
+          log_id: maxLogID1,
+          target_node: targetNode,
+          operation: "INSERT",
+          change_node: 0,
+          is_replicated_n2: 0,
+          is_replicated_n3: 0,
+          data_id: entry.id,
+          data_name: entry.name,
+          data_year: entry.year,
+          data_rank: entry.rank,
+        };
+
+        db1.query("INSERT INTO logger_n1 SET ?", log1, (err, result2) => {
+          if (!err) {
+            console.log(result2);
+          } else {
+            console.log(err);
+          }
+        });
+
+        const maxLogIDConn = maxLogID(dbConn, loggerNode);
+
+        // log for dbConn node
+        const logdbConn = {
+          log_id: maxLogIDConn,
+          target_node: targetNode,
+          operation: "INSERT",
+          change_node: 0,
+          is_replicated: 1,
+          data_id: entry.id,
+          data_name: entry.name,
+          data_year: entry.year,
+          data_rank: entry.rank,
+        };
+
         dbConn.query("INSERT INTO movies SET ?", entry, (err, result2) => {
           if (!err) {
             console.log(result2);
+            console.log("node logging successful");
+            dbConn.query(
+              "INSERT INTO ? SET ?",
+              [loggerNode, logdbConn],
+              (err, result2) => {
+                if (!err) {
+                  console.log(result2);
+                  db1.query(
+                    "UPDATE logger_n1 SET ? WHERE id=?",
+                    [{ repNode: 1 }, log1.log_id],
+                    (err, result2) => {
+                      if (!err) {
+                        console.log(result2);
+                      } else {
+                        console.log(err);
+                      }
+                    }
+                  );
+                } else {
+                  console.log(err);
+                }
+              }
+            );
           } else {
             console.log(err);
           }

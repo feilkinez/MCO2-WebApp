@@ -16,9 +16,10 @@ const db1 = mysql.createConnection({
 // Connect Database
 db1.connect((err) => {
   if (err) {
-    throw err;
+    console.log("NODE1 Crashed...");
+  } else {
+    console.log("NODE1 Connected...");
   }
-  console.log("NODE1 Connected...");
 });
 
 module.exports = db1;
