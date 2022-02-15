@@ -272,12 +272,16 @@ const controller = {
 
   // deletes entry from db
   delEntry: function (req, res) {
-    let dbConn;
+    let dbConn, targetNode, loggerNode;
 
     if (req.params.year < 1980) {
       dbConn = db2;
+      targetNode = "2";
+      loggerNode = "logger_n2";
     } else {
       dbConn = db3;
+      targetNode = "3";
+      loggerNode = "logger_n3";
     }
 
     db1.query(
@@ -285,13 +289,131 @@ const controller = {
       [req.params.id],
       (err, result) => {
         if (!err) {
+          db1.query(
+            "SELECT MAX(log_id) AS maxID FROM logger_n1",
+            (err, result) => {
+              if (!err) {
+                const maxLogID1 = result[0].maxID + 1;
+
+                const log1 = {
+                  log_id: maxLogID1,
+                  target_node: targetNode,
+                  operation: "DELETE",
+                  change_node: 0,
+                  is_replicated_n2: 0,
+                  is_replicated_n3: 0,
+                  data_id: req.params.id,
+                  data_name: req.params.name,
+                  data_year: req.params.year,
+                  data_rank: req.params.rank,
+                };
+
+                db1.query(
+                  "INSERT INTO logger_n1 SET ?",
+                  log1,
+                  (err, result2) => {
+                    if (!err) {
+                      console.log(result2);
+                    } else {
+                      console.log(err);
+                    }
+                  }
+                );
+
+                let query = "SELECT MAX(log_id) AS maxID FROM " + loggerNode;
+                dbConn.query(query, (err, result) => {
+                  if (!err) {
+                    const maxLogIDConn = result[0].maxID + 1;
+
+                    const logdbConn = {
+                      log_id: maxLogIDConn,
+                      target_node: targetNode,
+                      operation: "DELETE",
+                      change_node: 0,
+                      is_replicated: 1,
+                      data_id: req.params.id,
+                      data_name: req.params.name,
+                      data_year: req.params.year,
+                      data_rank: req.params.rank,
+                    };
+
+                    dbConn.query(
+                      "DELETE FROM movies WHERE id = ?",
+                      [req.params.id],
+                      (err, result) => {
+                        if (!err) {
+                          console.log(result);
+                        } else {
+                          console.log(err);
+                        }
+                      }
+                    );
+
+                    let query = "INSERT INTO " + loggerNode + " SET ?";
+                    dbConn.query(query, logdbConn, (err, result) => {
+                      if (!err) {
+                        let updateLog;
+
+                        if (req.params.year < 1980) {
+                          updateLog = {
+                            target_node: targetNode,
+                            operation: "DELETE",
+                            change_node: 0,
+                            is_replicated_n2: 1,
+                            is_replicated_n3: 0,
+                            data_id: req.params.id,
+                            data_name: req.params.name,
+                            data_year: req.params.year,
+                            data_rank: req.params.rank,
+                          };
+                        } else {
+                          updateLog = {
+                            target_node: targetNode,
+                            operation: "DELETE",
+                            change_node: 0,
+                            is_replicated_n2: 0,
+                            is_replicated_n3: 1,
+                            data_id: req.params.id,
+                            data_name: req.params.name,
+                            data_year: req.params.year,
+                            data_rank: req.params.rank,
+                          };
+                        }
+
+                        db1.query(
+                          "UPDATE logger_n1 SET ? WHERE log_id=?",
+                          [updateLog, log1.log_id],
+                          (err, result2) => {
+                            if (!err) {
+                              console.log(result2);
+                            } else {
+                              console.log(err);
+                            }
+                          }
+                        );
+                      } else {
+                        console.log(err);
+                      }
+                    });
+                  } else {
+                    console.log(err);
+                  }
+                });
+              } else {
+                console.log(err);
+              }
+            }
+          );
+
           console.log(result);
         } else {
+          // NODE 1 CRASHES
           console.log(err);
         }
       }
     );
 
+    // CODE BASIS FOR DELETE
     dbConn.query(
       "DELETE FROM movies WHERE id = ?",
       [req.params.id],
