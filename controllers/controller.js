@@ -3,13 +3,17 @@ const db1 = require(`../models/db1.js`);
 const db2 = require(`../models/db2.js`);
 const db3 = require(`../models/db3.js`);
 
-function maxLogID(db, loggerNode) {
-  db.query("SELECT MAX(log_id) AS maxID from ?", loggerNode, (err, result) => {
+function maxLogID(db, query) {
+  let maxLogID;
+  db.query(query, (err, result) => {
     if (!err) {
-      const maxLogID = result[0].maxID + 1;
-      return maxLogID;
+      maxLogID = result[0].maxID + 1;
+    }
+    else {
+      console.log(err);
     }
   });
+  return maxLogID;
 }
 
 const controller = {
@@ -108,7 +112,7 @@ const controller = {
           }
         });
 
-        const maxLogIDConn = maxLogID(dbConn, loggerNode);
+        const maxLogIDConn = maxLogID(dbConn, "SELECT MAX(log_id) AS maxID FROM " + loggerNode);
 
         // log for dbConn node
         const logdbConn = {

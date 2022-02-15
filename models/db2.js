@@ -16,9 +16,10 @@ const db2 = mysql.createConnection({
 // Connect Database
 db2.connect((err) => {
   if (err) {
-    throw err;
+    console.log("NODE2 Crashed...");
+  } else {
+    console.log("NODE2 Connected...");
   }
-  console.log("NODE2 Connected...");
 });
 
 module.exports = db2;

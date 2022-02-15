@@ -16,9 +16,10 @@ const db3 = mysql.createConnection({
 // Connect Database
 db3.connect((err) => {
   if (err) {
-    throw err;
+    console.log("NODE3 Crashed...");
+  } else {
+    console.log("NODE3 Connected...");
   }
-  console.log("NODE3 Connected...");
 });
 
 module.exports = db3;
