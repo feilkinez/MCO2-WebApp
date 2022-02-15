@@ -3,19 +3,6 @@ const db1 = require(`../models/db1.js`);
 const db2 = require(`../models/db2.js`);
 const db3 = require(`../models/db3.js`);
 
-function maxLogID(db, query) {
-  let maxLogID;
-  db.query(query, (err, result) => {
-    if (!err) {
-      maxLogID = result[0].maxID + 1;
-    }
-    else {
-      console.log(err);
-    }
-  });
-  return maxLogID;
-}
-
 const controller = {
   // Open index.hbs with movies
   getIndex: function (req, res) {
@@ -88,75 +75,93 @@ const controller = {
           }
         });
 
-        const maxLogID1 = maxLogID(db1, "logger_n1");
-
-        // log for node 1
-        const log1 = {
-          log_id: maxLogID1,
-          target_node: targetNode,
-          operation: "INSERT",
-          change_node: 0,
-          is_replicated_n2: 0,
-          is_replicated_n3: 0,
-          data_id: entry.id,
-          data_name: entry.name,
-          data_year: entry.year,
-          data_rank: entry.rank,
-        };
-
-        db1.query("INSERT INTO logger_n1 SET ?", log1, (err, result2) => {
+        db1.query("SELECT MAX(log_id) AS maxID FROM logger_n1", (err, result) => {
           if (!err) {
-            console.log(result2);
-          } else {
-            console.log(err);
-          }
-        });
+            const maxLogID1 = result[0].maxID + 1;
 
-        const maxLogIDConn = maxLogID(dbConn, "SELECT MAX(log_id) AS maxID FROM " + loggerNode);
+            // log for node 1
+            const log1 = {
+              log_id: maxLogID1,
+              target_node: targetNode,
+              operation: "INSERT",
+              change_node: 0,
+              is_replicated_n2: 0,
+              is_replicated_n3: 0,
+              data_id: entry.id,
+              data_name: entry.name,
+              data_year: entry.year,
+              data_rank: entry.rank,
+            };
 
-        // log for dbConn node
-        const logdbConn = {
-          log_id: maxLogIDConn,
-          target_node: targetNode,
-          operation: "INSERT",
-          change_node: 0,
-          is_replicated: 1,
-          data_id: entry.id,
-          data_name: entry.name,
-          data_year: entry.year,
-          data_rank: entry.rank,
-        };
-
-        dbConn.query("INSERT INTO movies SET ?", entry, (err, result2) => {
-          if (!err) {
-            console.log(result2);
-            console.log("node logging successful");
-            dbConn.query(
-              "INSERT INTO ? SET ?",
-              [loggerNode, logdbConn],
-              (err, result2) => {
-                if (!err) {
-                  console.log(result2);
-                  db1.query(
-                    "UPDATE logger_n1 SET ? WHERE id=?",
-                    [{ repNode: 1 }, log1.log_id],
-                    (err, result2) => {
-                      if (!err) {
-                        console.log(result2);
-                      } else {
-                        console.log(err);
-                      }
-                    }
-                  );
-                } else {
-                  console.log(err);
-                }
+            db1.query("INSERT INTO logger_n1 SET ?", log1, (err, result2) => {
+              if (!err) {
+                console.log(result2);
+              } else {
+                console.log(err);
               }
-            );
-          } else {
+            });
+
+            dbConn.query("SELECT MAX(log_id) AS maxID FROM " + loggerNode, (err, result) => {
+              if (!err) {
+                const maxLogIDConn = result[0].maxID + 1;
+
+                // log for dbConn node
+                const logdbConn = {
+                  log_id: maxLogIDConn,
+                  target_node: targetNode,
+                  operation: "INSERT",
+                  change_node: 0,
+                  is_replicated: 1,
+                  data_id: entry.id,
+                  data_name: entry.name,
+                  data_year: entry.year,
+                  data_rank: entry.rank,
+                };
+
+                dbConn.query("INSERT INTO movies SET ?", entry, (err, result2) => {
+                  if (!err) {
+                    console.log(result2);
+                    console.log("node logging successful");
+                    let query = "INSERT INTO " + loggerNode + " SET ?"
+                    dbConn.query(
+                      query, logdbConn,
+                      (err, result2) => {
+                        if (!err) {
+                          console.log(result2);
+                          db1.query(
+                            "UPDATE logger_n1 SET ? WHERE log_id=?",
+                            [{ repNode: 1 }, log1.log_id],
+                            (err, result2) => {
+                              if (!err) {
+                                console.log(result2);
+                              } else {
+                                console.log(err);
+                              }
+                            }
+                          );
+                        } else {
+                          console.log(err);
+                        }
+                      }
+                    );
+                  } else {
+                    console.log(err);
+                  }
+                });
+              }
+              else {
+                console.log(err);
+              }
+            });
+          }
+          else {
             console.log(err);
           }
         });
+
+        
+
+        
       } else {
         console.log(err);
       }
