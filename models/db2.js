@@ -1,4 +1,4 @@
-/* NODE 2 - DB >= 1980 */
+/* NODE 2 - DB < 1980 */
 
 const mysql = require("mysql");
 const dotenv = require("dotenv");
