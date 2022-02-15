@@ -178,7 +178,6 @@ const controller = {
       [req.params.id],
       (err, result) => {
         if (!err) {
-          res.redirect(`/`);
           console.log(result);
         } else {
           console.log(err);
