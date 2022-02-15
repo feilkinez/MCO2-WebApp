@@ -194,7 +194,7 @@ const controller = {
 
         let dbConn, targetNode, loggerNode;
 
-        // node 2
+        // node setter
         if (inputYear < 1980) {
           dbConn = db2;
           targetNode = "2";
@@ -210,10 +210,49 @@ const controller = {
             const maxID = result[0].maxID + 1;
 
             const entry = {
+              id: maxID,
               name: req.body.movieTitle,
               year: req.body.movieYear,
               rank: req.body.movieRate,
             };
+
+            dbConn.query("INSERT INTO movies SET ?", entry, (err, result2) => {
+              if (!err) {
+                console.log(result2);
+
+                dbConn.query(
+                  "SELECT MAX(log_id) AS maxID FROM " + loggerNode,
+                  (err, result) => {
+                    if (!err) {
+                      const maxLogIDConn = result[0].maxID + 1;
+
+                      const logdbConn = {
+                        log_id: maxLogIDConn,
+                        target_node: targetNode,
+                        operation: "INSERT",
+                        change_node: 0,
+                        is_replicated: 0,
+                        data_id: entry.id,
+                        data_name: entry.name,
+                        data_year: entry.year,
+                        data_rank: entry.rank,
+                      };
+
+                      let query = "INSERT INTO " + loggerNode + " SET ?";
+                      dbConn.query(query, logdbConn, (err, result2) => {
+                        if (!err) {
+                          console.log(result2);
+                        } else {
+                          console.log(err);
+                        }
+                      });
+                    }
+                  }
+                );
+              } else {
+                console.log(err);
+              }
+            });
           }
         });
       }
