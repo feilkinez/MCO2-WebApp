@@ -397,7 +397,7 @@ const controller = {
                       }
                     });
                   } else {
-                    console.log(err);
+                    res.redirect(`/`);
                   }
                 });
               } else {
