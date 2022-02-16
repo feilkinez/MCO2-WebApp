@@ -518,7 +518,7 @@ const controller = {
       changeNode = 1;
     }
 
-    // update node 1 regardless
+    // update node 1
     db1.query(
       "UPDATE movies SET ? WHERE id=?",
       [updateEntry, req.body.movieID],
@@ -965,7 +965,201 @@ const controller = {
         }
         // NODE 1 CRASHES
         else {
-          console.log(err);
+          // no transferring needed
+          if (changeNode == 0) {
+            dbDest.query(
+              "UPDATE movies SET ? WHERE id = ?",
+              [updateEntry, req.body.movieID],
+              (err, result) => {
+                if (!err) {
+                  dbDest.query(
+                    "SELECT MAX(log_id) AS maxID from " + loggerNode,
+                    (err, result) => {
+                      if (!err) {
+                        const maxLogIDDest = result[0].maxID + 1;
+
+                        const logDBDest = {
+                          log_id: maxLogIDDest,
+                          target_node: targetNode,
+                          operation: "UPDATE",
+                          change_node: changeNode,
+                          is_replicated: 0,
+                          data_id: req.body.movieID,
+                          data_name: req.body.movieTitle,
+                          data_year: req.body.changeYear,
+                          data_rank: req.body.movieRate,
+                        };
+
+                        let query = "INSERT INTO " + loggerNode + " SET ?";
+                        dbDest.query(query, logDBDest, (err, result) => {
+                          if (!err) {
+                            console.log(result);
+                          } else {
+                            console.log(err);
+                          }
+                        });
+                      } else {
+                        console.log(err);
+                      }
+                    }
+                  );
+                } else {
+                  console.log(err);
+                }
+              }
+            );
+          }
+          // transfer needed
+          else {
+            dbSrc.query(
+              "DELETE FROM movies WHERE id=?",
+              req.body.movieID,
+              (err, result) => {
+                if (!err) {
+                  // if connected to src, delete from src then insert to dest
+                  dbSrc.query(
+                    "SELECT MAX(log_id) AS maxID from " + loggerSrc,
+                    (err, result) => {
+                      if (!err) {
+                        const maxLogIDSrc = result[0].maxID + 1;
+
+                        const logDBSrc = {
+                          log_id: maxLogIDSrc,
+                          target_node: targetNode,
+                          operation: "UPDATE",
+                          change_node: changeNode,
+                          is_replicated: 0,
+                          data_id: req.body.movieID,
+                          data_name: req.body.movieTitle,
+                          data_year: req.body.changeYear,
+                          data_rank: req.body.movieRate,
+                        };
+
+                        // log to dbSrc the DELETE operation
+                        let query = "INSERT INTO " + loggerSrc + " SET ?";
+                        dbSrc.query(query, logDBSrc, (err, result) => {
+                          if (!err) {
+                            console.log("dbSrc DELETE logged");
+
+                            // insert to dbDest
+                            dbDest.query(
+                              "INSERT INTO movies SET ?",
+                              addEntry,
+                              (err, result) => {
+                                if (!err) {
+                                  // insert to dbDest logger
+                                  console.log("LOGGER NODE: " + loggerNode);
+
+                                  dbDest.query(
+                                    "SELECT MAX(log_id) AS maxID from " +
+                                      loggerNode,
+                                    (err, result) => {
+                                      if (!err) {
+                                        console.log(
+                                          "PUMASOK SA SELECT MAX DEST LOG"
+                                        );
+                                        const maxLogIDDest =
+                                          result[0].maxID + 1;
+
+                                        const logDBDest = {
+                                          log_id: maxLogIDDest,
+                                          target_node: targetNode,
+                                          operation: "UPDATE",
+                                          change_node: changeNode,
+                                          is_replicated: 0,
+                                          data_id: req.body.movieID,
+                                          data_name: req.body.movieTitle,
+                                          data_year: req.body.changeYear,
+                                          data_rank: req.body.movieRate,
+                                        };
+
+                                        // log to dbDest the INSERT operation
+                                        let query =
+                                          "INSERT INTO " +
+                                          loggerNode +
+                                          " SET ?";
+                                        dbDest.query(
+                                          query,
+                                          logDBDest,
+                                          (err, result) => {
+                                            if (!err) {
+                                              console.log(
+                                                "dbDest UPDATE logged"
+                                              );
+                                            } else {
+                                              console.log(
+                                                "dbDest INSERT not logged"
+                                              );
+                                              console.log(err);
+                                            }
+                                          }
+                                        );
+                                      } else {
+                                        console.log(err);
+                                      }
+                                    }
+                                  );
+                                } else {
+                                  console.log("INSERT FAILED");
+                                }
+                              }
+                            );
+                          } else {
+                            console.log("dbSrc DELETE not logged");
+                            console.log(err);
+                          }
+                        });
+                      }
+                    }
+                  );
+                } else {
+                  // if can't connect to src, insert to dest only
+                  // insert to dbDest
+                  dbDest.query(
+                    "INSERT INTO movies SET ?",
+                    addEntry,
+                    (err, result) => {
+                      if (!err) {
+                        // insert to dbDest logger
+                        dbDest.query(
+                          "SELECT MAX(log_id) AS maxID from " + loggerNode,
+                          (err, result) => {
+                            if (!err) {
+                              const maxLogIDDest = result[0].maxID + 1;
+
+                              const logDBDest = {
+                                log_id: maxLogIDDest,
+                                target_node: targetNode,
+                                operation: "INSERT",
+                                change_node: changeNode,
+                                is_replicated: 0,
+                                data_id: req.body.movieID,
+                                data_name: req.body.movieTitle,
+                                data_year: req.body.changeYear,
+                                data_rank: req.body.movieRate,
+                              };
+
+                              // log to dbDest the INSERT operation
+                              let query =
+                                "INSERT INTO " + loggerNode + " SET ?";
+                              dbDest.query(query, logDBDest, (err, result) => {
+                                if (!err) {
+                                  console.log("dbDest INSERT logged");
+                                } else {
+                                  console.log("dbDest INSERT not logged");
+                                  console.log(err);
+                                }
+                              });
+                            }
+                          }
+                        );
+                      }
+                    }
+                  );
+                }
+              }
+            );
+          }
         }
       }
     );
