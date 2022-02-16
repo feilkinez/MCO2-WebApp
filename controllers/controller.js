@@ -972,20 +972,4 @@ const controller = {
   },
 };
 
-/*
-  db1.beginTransaction();
-  try {
-    db1.query("INSERT");
-    if (!err) {
-      proceed
-    } else {
-      print err
-    }
-
-    db1.commit();
-  } catch {
-    db1.rollback();
-  }
-*/
-
 module.exports = controller;
