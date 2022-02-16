@@ -385,6 +385,7 @@ const controller = {
                           [updateLog, log1.log_id],
                           (err, result2) => {
                             if (!err) {
+                              res.redirect(`/`);
                               console.log(result2);
                             } else {
                               console.log(err);
@@ -408,7 +409,7 @@ const controller = {
           console.log(result);
         } else {
           // NODE 1 CRASHES
-          const inputYear = req.params.year;
+          const inputYear = req.params.movieYear;
 
           let dbConn, targetNode, loggerNode;
 
@@ -487,20 +488,34 @@ const controller = {
     const initYear = req.body.initYear;
     const changeYear = req.body.changeYear;
 
-    let dbDest, dbSrc;
+    let dbDest, dbSrc, targetNode, loggerNode, loggerSrc;
 
     if (changeYear < 1980) {
       dbDest = db2;
       dbSrc = db2;
+      targetNode = "2";
+      loggerNode = "logger_n2";
+      loggerSrc = "logger_n3";
     } else {
       dbDest = db3;
       dbSrc = db3;
+      targetNode = "3";
+      loggerNode = "logger_n3";
+      loggerSrc = "logger_n2";
     }
 
     if (initYear < 1980) {
       dbSrc = db2;
     } else {
       dbSrc = db3;
+    }
+
+    let changeNode;
+
+    if (dbSrc == dbDest) {
+      changeNode = 0;
+    } else {
+      changeNode = 1;
     }
 
     // update node 1 regardless
@@ -510,55 +525,467 @@ const controller = {
       (err, result2) => {
         if (!err) {
           console.log(result2);
-        } else {
+
+          db1.query(
+            "SELECT MAX(log_id) AS maxID from logger_n1",
+            (err, result) => {
+              if (!err) {
+                const maxLogID1 = result[0].maxID + 1;
+
+                // log for node 1
+                const log1 = {
+                  log_id: maxLogID1,
+                  target_node: targetNode,
+                  operation: "UPDATE",
+                  change_node: changeNode,
+                  is_replicated_n2: 0,
+                  is_replicated_n3: 0,
+                  data_id: req.body.movieID,
+                  data_name: req.body.movieTitle,
+                  data_year: req.body.changeYear,
+                  data_rank: req.body.movieRate,
+                };
+
+                db1.query(
+                  "INSERT INTO logger_n1 SET ?",
+                  log1,
+                  (err, result2) => {
+                    if (!err) {
+                      console.log(result2);
+
+                      // no transferring needed
+                      if (changeNode == 0) {
+                        dbDest.query(
+                          "UPDATE movies SET ? WHERE id = ?",
+                          [updateEntry, req.body.movieID],
+                          (err, result) => {
+                            if (!err) {
+                              dbDest.query(
+                                "SELECT MAX(log_id) AS maxID from " +
+                                  loggerNode,
+                                (err, result) => {
+                                  if (!err) {
+                                    const maxLogIDDest = result[0].maxID + 1;
+
+                                    const logDBDest = {
+                                      log_id: maxLogIDDest,
+                                      target_node: targetNode,
+                                      operation: "UPDATE",
+                                      change_node: changeNode,
+                                      is_replicated: 1,
+                                      data_id: req.body.movieID,
+                                      data_name: req.body.movieTitle,
+                                      data_year: req.body.changeYear,
+                                      data_rank: req.body.movieRate,
+                                    };
+
+                                    let query =
+                                      "INSERT INTO " + loggerNode + " SET ?";
+                                    dbDest.query(
+                                      query,
+                                      logDBDest,
+                                      (err, result) => {
+                                        if (!err) {
+                                          console.log(result);
+
+                                          let updateLog;
+                                          if (changeYear < 1980) {
+                                            updateLog = {
+                                              target_node: targetNode,
+                                              operation: "UPDATE",
+                                              change_node: changeNode,
+                                              is_replicated_n2: 1,
+                                              is_replicated_n3: 0,
+                                              data_id: req.body.movieID,
+                                              data_name: req.body.movieTitle,
+                                              data_year: req.body.changeYear,
+                                              data_rank: req.body.movieRate,
+                                            };
+                                          } else {
+                                            updateLog = {
+                                              target_node: targetNode,
+                                              operation: "UPDATE",
+                                              change_node: changeNode,
+                                              is_replicated_n2: 0,
+                                              is_replicated_n3: 1,
+                                              data_id: req.body.movieID,
+                                              data_name: req.body.movieTitle,
+                                              data_year: req.body.changeYear,
+                                              data_rank: req.body.movieRate,
+                                            };
+                                          }
+
+                                          // update node 1 log when dbDest is online
+                                          db1.query(
+                                            "UPDATE logger_n1 SET ? WHERE log_id=?",
+                                            [updateLog, log1.log_id],
+                                            (err, result) => {
+                                              if (!err) {
+                                                console.log(result);
+                                              } else {
+                                                console.log(err);
+                                              }
+                                            }
+                                          );
+                                        } else {
+                                          console.log(err);
+                                        }
+                                      }
+                                    );
+                                  } else {
+                                    console.log(err);
+                                  }
+                                }
+                              );
+                            } else {
+                              console.log(err);
+                            }
+                          }
+                        );
+                      }
+                      //transfer needed
+                      else {
+                        dbSrc.query(
+                          "DELETE FROM movies WHERE id=?",
+                          req.body.movieID,
+                          (err, result) => {
+                            if (!err) {
+                              // if connected to src, delete from src then insert to dest
+                              dbSrc.query(
+                                "SELECT MAX(log_id) AS maxID from " + loggerSrc,
+                                (err, result) => {
+                                  if (!err) {
+                                    const maxLogIDSrc = result[0].maxID + 1;
+
+                                    const logDBSrc = {
+                                      log_id: maxLogIDSrc,
+                                      target_node: targetNode,
+                                      operation: "UPDATE",
+                                      change_node: changeNode,
+                                      is_replicated: 1,
+                                      data_id: req.body.movieID,
+                                      data_name: req.body.movieTitle,
+                                      data_year: req.body.changeYear,
+                                      data_rank: req.body.movieRate,
+                                    };
+
+                                    // log to dbSrc the DELETE operation
+                                    let query =
+                                      "INSERT INTO " + loggerSrc + " SET ?";
+                                    dbSrc.query(
+                                      query,
+                                      logDBSrc,
+                                      (err, result) => {
+                                        if (!err) {
+                                          console.log("dbSrc DELETE logged");
+
+                                          let updateLog;
+                                          if (initYear < 1980) {
+                                            updateLog = {
+                                              target_node: targetNode,
+                                              operation: "UPDATE",
+                                              change_node: changeNode,
+                                              is_replicated_n2: 1,
+                                              is_replicated_n3: 0,
+                                              data_id: req.body.movieID,
+                                              data_name: req.body.movieTitle,
+                                              data_year: req.body.changeYear,
+                                              data_rank: req.body.movieRate,
+                                            };
+                                          } else {
+                                            updateLog = {
+                                              target_node: targetNode,
+                                              operation: "UPDATE",
+                                              change_node: changeNode,
+                                              is_replicated_n2: 0,
+                                              is_replicated_n3: 1,
+                                              data_id: req.body.movieID,
+                                              data_name: req.body.movieTitle,
+                                              data_year: req.body.changeYear,
+                                              data_rank: req.body.movieRate,
+                                            };
+                                          }
+
+                                          // update node 1 log when dbSrc is online
+                                          db1.query(
+                                            "UPDATE logger_n1 SET ? WHERE log_id=?",
+                                            [updateLog, log1.log_id],
+                                            (err, result) => {
+                                              if (!err) {
+                                                console.log(result);
+
+                                                // insert to dbDest
+                                                dbDest.query(
+                                                  "INSERT INTO movies SET ?",
+                                                  addEntry,
+                                                  (err, result) => {
+                                                    if (!err) {
+                                                      // insert to dbDest logger
+                                                      console.log(
+                                                        "LOGGER NODE: " +
+                                                          loggerNode
+                                                      );
+
+                                                      dbDest.query(
+                                                        "SELECT MAX(log_id) AS maxID from " +
+                                                          loggerNode,
+                                                        (err, result) => {
+                                                          if (!err) {
+                                                            console.log(
+                                                              "PUMASOK SA SELECT MAX DEST LOG"
+                                                            );
+                                                            const maxLogIDDest =
+                                                              result[0].maxID +
+                                                              1;
+
+                                                            const logDBDest = {
+                                                              log_id:
+                                                                maxLogIDDest,
+                                                              target_node:
+                                                                targetNode,
+                                                              operation:
+                                                                "UPDATE",
+                                                              change_node:
+                                                                changeNode,
+                                                              is_replicated: 1,
+                                                              data_id:
+                                                                req.body
+                                                                  .movieID,
+                                                              data_name:
+                                                                req.body
+                                                                  .movieTitle,
+                                                              data_year:
+                                                                req.body
+                                                                  .changeYear,
+                                                              data_rank:
+                                                                req.body
+                                                                  .movieRate,
+                                                            };
+
+                                                            // log to dbDest the INSERT operation
+                                                            let query =
+                                                              "INSERT INTO " +
+                                                              loggerNode +
+                                                              " SET ?";
+                                                            dbDest.query(
+                                                              query,
+                                                              logDBDest,
+                                                              (err, result) => {
+                                                                if (!err) {
+                                                                  console.log(
+                                                                    "dbDest UPDATE logged"
+                                                                  );
+
+                                                                  let updateLog;
+
+                                                                  updateLog = {
+                                                                    target_node:
+                                                                      targetNode,
+                                                                    operation:
+                                                                      "UPDATE",
+                                                                    change_node:
+                                                                      changeNode,
+                                                                    is_replicated_n2: 1,
+                                                                    is_replicated_n3: 1,
+                                                                    data_id:
+                                                                      req.body
+                                                                        .movieID,
+                                                                    data_name:
+                                                                      req.body
+                                                                        .movieTitle,
+                                                                    data_year:
+                                                                      req.body
+                                                                        .changeYear,
+                                                                    data_rank:
+                                                                      req.body
+                                                                        .movieRate,
+                                                                  };
+
+                                                                  // update node 1 log when dbDest is online
+                                                                  db1.query(
+                                                                    "UPDATE logger_n1 SET ? WHERE log_id=?",
+                                                                    [
+                                                                      updateLog,
+                                                                      log1.log_id,
+                                                                    ],
+                                                                    (
+                                                                      err,
+                                                                      result
+                                                                    ) => {
+                                                                      if (
+                                                                        !err
+                                                                      ) {
+                                                                        console.log(
+                                                                          result
+                                                                        );
+                                                                      } else {
+                                                                        console.log(
+                                                                          err
+                                                                        );
+                                                                      }
+                                                                    }
+                                                                  );
+                                                                } else {
+                                                                  console.log(
+                                                                    "dbDest INSERT not logged"
+                                                                  );
+                                                                  console.log(
+                                                                    err
+                                                                  );
+                                                                }
+                                                              }
+                                                            );
+                                                          } else {
+                                                            console.log(err);
+                                                          }
+                                                        }
+                                                      );
+                                                    } else {
+                                                      console.log(
+                                                        "INSERT FAILED"
+                                                      );
+                                                    }
+                                                  }
+                                                );
+                                              } else {
+                                                console.log(err);
+                                              }
+                                            }
+                                          );
+                                        } else {
+                                          console.log(
+                                            "dbSrc DELETE not logged"
+                                          );
+                                          console.log(err);
+                                        }
+                                      }
+                                    );
+                                  }
+                                }
+                              );
+                            } else {
+                              // if can't connect to src, insert to dest only
+                              // insert to dbDest
+                              dbDest.query(
+                                "INSERT INTO movies SET ?",
+                                addEntry,
+                                (err, result) => {
+                                  if (!err) {
+                                    // insert to dbDest logger
+                                    dbDest.query(
+                                      "SELECT MAX(log_id) AS maxID from " +
+                                        loggerNode,
+                                      (err, result) => {
+                                        if (!err) {
+                                          const maxLogIDDest =
+                                            result[0].maxID + 1;
+
+                                          const logDBDest = {
+                                            log_id: maxLogIDDest,
+                                            target_node: targetNode,
+                                            operation: "INSERT",
+                                            change_node: changeNode,
+                                            is_replicated: 0,
+                                            data_id: req.body.movieID,
+                                            data_name: req.body.movieTitle,
+                                            data_year: req.body.changeYear,
+                                            data_rank: req.body.movieRate,
+                                          };
+
+                                          // log to dbDest the INSERT operation
+                                          let query =
+                                            "INSERT INTO " +
+                                            loggerNode +
+                                            " SET ?";
+                                          dbDest.query(
+                                            query,
+                                            logDBDest,
+                                            (err, result) => {
+                                              if (!err) {
+                                                console.log(
+                                                  "dbDest INSERT logged"
+                                                );
+
+                                                let updateLog;
+
+                                                updateLog = {
+                                                  target_node: targetNode,
+                                                  operation: "UPDATE",
+                                                  change_node: changeNode,
+                                                  is_replicated_n2: 1,
+                                                  is_replicated_n3: 1,
+                                                  data_id: req.body.movieID,
+                                                  data_name:
+                                                    req.body.movieTitle,
+                                                  data_year:
+                                                    req.body.changeYear,
+                                                  data_rank: req.body.movieRank,
+                                                };
+
+                                                // update node 1 log when dbDest is online
+                                                db1.query(
+                                                  "UPDATE logger_n1 SET ? WHERE log_id=?",
+                                                  [updateLog, log1.log_id],
+                                                  (err, result) => {
+                                                    if (!err) {
+                                                      console.log(result);
+                                                    } else {
+                                                      console.log(err);
+                                                    }
+                                                  }
+                                                );
+                                              } else {
+                                                console.log(
+                                                  "dbDest INSERT not logged"
+                                                );
+                                                console.log(err);
+                                              }
+                                            }
+                                          );
+                                        }
+                                      }
+                                    );
+                                  }
+                                }
+                              );
+                            }
+                          }
+                        );
+                      }
+                    } else {
+                      console.log(err);
+                    }
+                  }
+                );
+              } else {
+                console.log(err);
+              }
+            }
+          );
+        }
+        // NODE 1 CRASHES
+        else {
           console.log(err);
         }
       }
     );
-
-    // node changes
-    if (
-      (changeYear >= 1980 && initYear < 1980) ||
-      (changeYear < 1980 && initYear >= 1980)
-    ) {
-      // put in destination
-      dbDest.query("INSERT INTO movies SET ?", addEntry, (err, result2) => {
-        if (!err) {
-          console.log(result2);
-        } else {
-          console.log(err);
-        }
-      });
-
-      // delete from source
-      dbSrc.query(
-        "DELETE FROM movies WHERE id = ?",
-        [req.body.movieID],
-        (err, result) => {
-          if (!err) {
-            res.redirect(`/`);
-            console.log(result);
-          } else {
-            console.log(err);
-          }
-        }
-      );
-    }
-    // no changing of nodes required
-    else {
-      dbDest.query(
-        "UPDATE movies SET ? WHERE id=?",
-        [updateEntry, req.body.movieID],
-        (err, result2) => {
-          if (!err) {
-            console.log(result2);
-          } else {
-            console.log(err);
-          }
-        }
-      );
-    }
   },
 };
+
+/*
+  db1.beginTransaction();
+  try {
+    db1.query("INSERT");
+    if (!err) {
+      proceed
+    } else {
+      print err
+    }
+
+    db1.commit();
+  } catch {
+    db1.rollback();
+  }
+*/
 
 module.exports = controller;
