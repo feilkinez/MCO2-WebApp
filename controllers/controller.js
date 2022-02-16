@@ -408,21 +408,63 @@ const controller = {
           console.log(result);
         } else {
           // NODE 1 CRASHES
-          console.log(err);
-        }
-      }
-    );
+          const inputYear = req.params.year;
 
-    // CODE BASIS FOR DELETE
-    dbConn.query(
-      "DELETE FROM movies WHERE id = ?",
-      [req.params.id],
-      (err, result) => {
-        if (!err) {
-          res.redirect(`/`);
-          console.log(result);
-        } else {
-          console.log(err);
+          let dbConn, targetNode, loggerNode;
+
+          // node setter
+          if (inputYear < 1980) {
+            dbConn = db2;
+            targetNode = "2";
+            loggerNode = "logger_n2";
+          } else {
+            dbConn = db3;
+            targetNode = "3";
+            loggerNode = "logger_n3";
+          }
+
+          dbConn.query(
+            "DELETE FROM movies WHERE id = ?",
+            [req.params.id],
+            (err, result) => {
+              if (!err) {
+                console.log(result);
+
+                dbConn.query(
+                  "SELECT MAX(log_id) AS maxID FROM " + loggerNode,
+                  (err, result) => {
+                    if (!err) {
+                      const maxLogIDConn = result[0].maxID + 1;
+
+                      const logdbConn = {
+                        log_id: maxLogIDConn,
+                        target_node: targetNode,
+                        operation: "DELETE",
+                        change_node: 0,
+                        is_replicated: 0,
+                        data_id: req.params.id,
+                        data_name: req.params.name,
+                        data_year: req.params.year,
+                        data_rank: req.params.rank,
+                      };
+
+                      let query = "INSERT INTO " + loggerNode + " SET ?";
+                      dbConn.query(query, logdbConn, (err, result2) => {
+                        if (!err) {
+                          res.redirect(`/`);
+                          console.log(result2);
+                        } else {
+                          console.log(err);
+                        }
+                      });
+                    }
+                  }
+                );
+              } else {
+                console.log(err);
+              }
+            }
+          );
         }
       }
     );
