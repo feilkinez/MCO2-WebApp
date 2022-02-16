@@ -1,11 +1,1850 @@
-const mysql = require(`mysql`);
 const db1 = require(`../models/db1.js`);
 const db2 = require(`../models/db2.js`);
 const db3 = require(`../models/db3.js`);
 
+// CHECK DB2 LOG AND UPDATE
+function checkDb2Log() {
+  // CHECKS IF DB2 IS ONLINE
+  db2.query("SELECT MAX(id) AS maxID FROM movies", (err, result) => {
+    if (!err) {
+      // DB2 IS ONLINE
+      // CHECK NODE 1 LOG
+      db1.query(
+        "SELECT * from logger_n1 WHERE is_replicated_n2 = 0",
+        (err, result) => {
+          if (!err) {
+            // DB1 IS ONLINE
+            result.forEach(function (r, index) {
+              var itemsProcessed = 0;
+
+              setTimeout(() => {
+                const entry = {
+                  id: r.data_id,
+                  name: r.data_name,
+                  year: r.data_year,
+                  rank: r.data_rank,
+                };
+                // IF LOG OPERATION IS INSERT
+                if (r.operation == "INSERT") {
+                  if (r.target_node == "2") {
+                    // IF TARGET IS NODE 2
+                    // INSERT DATA TO DB2
+                    db2.query(
+                      "INSERT INTO movies SET ?",
+                      entry,
+                      (err, result) => {
+                        if (!err) {
+                          const updateLog = {
+                            target_node: r.target_node,
+                            operation: r.operation,
+                            change_node: r.change_node,
+                            is_replicated_n2: 1,
+                            is_replicated_n3: r.is_replicated_n3,
+                            data_id: entry.id,
+                            data_name: entry.name,
+                            data_year: entry.year,
+                            data_rank: entry.rank,
+                          };
+
+                          // UPDATE IS_REPLICATED VALUE FOR LOGS
+                          db1.query(
+                            "UPDATE logger_n1 SET ? WHERE log_id = ?",
+                            [updateLog, r.log_id],
+                            (err, result) => {
+                              if (!err) {
+                                db2.query(
+                                  "SELECT MAX(log_id) AS maxID FROM logger_n2",
+                                  (err, result) => {
+                                    if (!err) {
+                                      // INSERT DB2 LOGGER
+
+                                      const maxLogID1 = result[0].maxID + 1;
+                                      const db2Log = {
+                                        log_id: maxLogID1,
+                                        target_node: r.target_node,
+                                        operation: r.operation,
+                                        change_node: r.change_node,
+                                        is_replicated: 1,
+                                        data_id: entry.id,
+                                        data_name: entry.name,
+                                        data_year: entry.year,
+                                        data_rank: entry.rank,
+                                      };
+
+                                      db2.query(
+                                        "INSERT INTO logger_n2 SET ?",
+                                        db2Log,
+                                        (err, result) => {
+                                          if (!err) {
+                                            console.log(
+                                              "Log entry has reflected in db2"
+                                            );
+                                            checkDb3Log();
+                                          } else {
+                                            console.log(err);
+                                          }
+                                        }
+                                      );
+                                    } else {
+                                      console.log(err);
+                                    }
+                                  }
+                                );
+                              } else {
+                                console.log(err);
+                              }
+                            }
+                          );
+                        } else {
+                          console.log(err);
+                        }
+                      }
+                    );
+                  } else {
+                    // IF TARGET IS NOT NODE 2
+                    // UPDATE IS_REPLICATED VALUE FOR LOGS
+                    const updateLog = {
+                      target_node: r.target_node,
+                      operation: r.operation,
+                      change_node: r.change_node,
+                      is_replicated_n2: 1,
+                      is_replicated_n3: r.is_replicated_n3,
+                      data_id: entry.id,
+                      data_name: entry.name,
+                      data_year: entry.year,
+                      data_rank: entry.rank,
+                    };
+
+                    // UPDATE NODE 1 LOG
+                    db1.query(
+                      "UPDATE logger_n1 SET ? WHERE log_id = ?",
+                      [updateLog, r.log_id],
+                      (err, result) => {
+                        if (!err) {
+                          console.log(
+                            "DB2 updated Node 1 Log log_id: " + r.log_id
+                          );
+                        } else {
+                          console.log(err);
+                        }
+                      }
+                    );
+                  }
+                }
+                // IF LOG OPERATION IS DELETE
+                else if (r.operation == "DELETE") {
+                  if (r.target_node == "2") {
+                    // DELETE FROM DB2
+                    db2.query(
+                      "DELETE FROM movies WHERE id = ?",
+                      [entry.id],
+                      (err, result) => {
+                        if (!err) {
+                          if (!err) {
+                            const updateLog = {
+                              target_node: r.target_node,
+                              operation: r.operation,
+                              change_node: r.change_node,
+                              is_replicated_n2: 1,
+                              is_replicated_n3: r.is_replicated_n3,
+                              data_id: entry.id,
+                              data_name: entry.name,
+                              data_year: entry.year,
+                              data_rank: entry.rank,
+                            };
+
+                            // UPDATE IS_REPLICATED VALUE FOR LOGS
+                            db1.query(
+                              "UPDATE logger_n1 SET ? WHERE log_id = ?",
+                              [updateLog, r.log_id],
+                              (err, result) => {
+                                if (!err) {
+                                  db2.query(
+                                    "SELECT MAX(log_id) AS maxID FROM logger_n2",
+                                    (err, result) => {
+                                      if (!err) {
+                                        const maxLogID1 = result[0].maxID + 1;
+                                        const db2Log = {
+                                          log_id: maxLogID1,
+                                          target_node: r.target_node,
+                                          operation: r.operation,
+                                          change_node: r.change_node,
+                                          is_replicated: 1,
+                                          data_id: entry.id,
+                                          data_name: entry.name,
+                                          data_year: entry.year,
+                                          data_rank: entry.rank,
+                                        };
+                                        // INSERT TO DB2 LOGGER
+                                        db2.query(
+                                          "INSERT INTO logger_n2 SET ?",
+                                          db2Log,
+                                          (err, result) => {
+                                            if (!err) {
+                                              console.log(
+                                                "Log entry has reflected in db2"
+                                              );
+                                              checkDb3Log();
+                                            } else {
+                                              console.log(err);
+                                            }
+                                          }
+                                        );
+                                      } else {
+                                        console.log(err);
+                                      }
+                                    }
+                                  );
+                                } else {
+                                  console.log(err);
+                                }
+                              }
+                            );
+                          }
+                        } else {
+                          console.log(err);
+                        }
+                      }
+                    );
+                  } else {
+                    // IF TARGET IS NOT NODE 2
+                    const updateLog = {
+                      target_node: r.target_node,
+                      operation: r.operation,
+                      change_node: r.change_node,
+                      is_replicated_n2: 1,
+                      is_replicated_n3: r.is_replicated_n3,
+                      data_id: entry.id,
+                      data_name: entry.name,
+                      data_year: entry.year,
+                      data_rank: entry.rank,
+                    };
+
+                    // UPDATE IS_REPLICATED VALUE FOR LOGS
+                    db1.query(
+                      "UPDATE logger_n1 SET ? WHERE log_id = ?",
+                      [updateLog, r.log_id],
+                      (err, result) => {
+                        if (!err) {
+                          console.log("DB1 UPDATE LOG READ");
+                        } else {
+                          console.log(err);
+                        }
+                      }
+                    );
+                  }
+                }
+                // IF LOG OPERATION IS UPDATE
+                else {
+                  if (r.changeNode == 0) {
+                    // NO TRANSFER UPDATE
+                    if (r.target_node == "2") {
+                      // UPDATE DB2
+                      db2.query(
+                        "UPDATE movies SET ? WHERE id = ?",
+                        [entry, r.id],
+                        (err, result) => {
+                          if (!err) {
+                            const updateLog = {
+                              target_node: r.target_node,
+                              operation: r.operation,
+                              change_node: r.change_node,
+                              is_replicated_n2: 1,
+                              is_replicated_n3: r.is_replicated_n3,
+                              data_id: entry.id,
+                              data_name: entry.name,
+                              data_year: entry.year,
+                              data_rank: entry.rank,
+                            };
+
+                            // UPDATE IS_REPLICATED VALUE FOR LOGS1
+                            db1.query(
+                              "UPDATE logger_n1 SET ? WHERE log_id = ?",
+                              [updateLog, r.log_id],
+                              (err, result) => {
+                                if (!err) {
+                                  db2.query(
+                                    "SELECT MAX(log_id) FROM logger_n2",
+                                    (err, result) => {
+                                      if (!err) {
+                                        const maxLogID1 = result[0].maxID + 1;
+                                        const db2Log = {
+                                          log_id: maxLogID1,
+                                          target_node: r.target_node,
+                                          operation: r.operation,
+                                          change_node: r.change_node,
+                                          is_replicated: 1,
+                                          data_id: entry.id,
+                                          data_name: entry.name,
+                                          data_year: entry.year,
+                                          data_rank: entry.rank,
+                                        };
+                                        // INSERT INTO DB2 LOGGER
+                                        db2.query(
+                                          "INSERT INTO logger_n2 SET ?",
+                                          db2Log,
+                                          (err, result) => {
+                                            if (!err) {
+                                              console.log(
+                                                "Log entry has reflected in db2"
+                                              );
+                                              checkDb3Log();
+                                            } else {
+                                              console.log(err);
+                                            }
+                                          }
+                                        );
+                                      } else {
+                                        console.log(err);
+                                      }
+                                    }
+                                  );
+                                } else {
+                                  console.log(err);
+                                }
+                              }
+                            );
+                          } else {
+                            console.log(err);
+                          }
+                        }
+                      );
+                    } else {
+                      // IF TARGET IS NOT NODE 2
+                      // UPDATE IS_REPLICATED VALUE FOR LOGS
+                      const updateLog = {
+                        target_node: r.target_node,
+                        operation: r.operation,
+                        change_node: r.change_node,
+                        is_replicated_n2: 1,
+                        is_replicated_n3: r.is_replicated_n3,
+                        data_id: entry.id,
+                        data_name: entry.name,
+                        data_year: entry.year,
+                        data_rank: entry.rank,
+                      };
+
+                      // UPDATE NODE 1 LOG
+                      db1.query(
+                        "UPDATE logger_n1 SET ? WHERE log_id = ?",
+                        [updateLog, r.log_id],
+                        (err, result) => {
+                          if (!err) {
+                            console.log(
+                              "DB2 updated Node 1 Log log_id: " + r.log_id
+                            );
+                          } else {
+                            console.log(err);
+                          }
+                        }
+                      );
+                    }
+                  } else {
+                    // TRANSFER NEEDED
+                    if (r.target_node == "2") {
+                      // INSERT TO N2 (& DELETE FROM N3 - TO BE DONE IN A DIFFERENT LOG CHECK)
+                      // INSERT DATA TO NODE 2
+                      db2.query(
+                        "INSERT INTO movies SET ? WHERE id = ?",
+                        [entry, r.id],
+                        (err, result) => {
+                          if (!err) {
+                            const updateLog = {
+                              target_node: r.target_node,
+                              operation: r.operation,
+                              change_node: r.change_node,
+                              is_replicated_n2: 1,
+                              is_replicated_n3: r.is_replicated_n3,
+                              data_id: entry.id,
+                              data_name: entry.name,
+                              data_year: entry.year,
+                              data_rank: entry.rank,
+                            };
+                            // UPDATE IS_REPLICATED DATA IN DB1
+                            db1.query(
+                              "UPDATE logger_n1 SET ? WHERE log_id = ?",
+                              [updateLog, r.log_id],
+                              (err, result) => {
+                                if (!err) {
+                                  db2.query(
+                                    "SELECT MAX(log_id) AS maxID FROM logger_n2",
+                                    (err, result) => {
+                                      if (!err) {
+                                        const maxLogID1 = result[0].maxID + 1;
+                                        const db2Log = {
+                                          log_id: maxLogID1,
+                                          target_node: r.target_node,
+                                          operation: r.operation,
+                                          change_node: r.change_node,
+                                          is_replicated: 1,
+                                          data_id: entry.id,
+                                          data_name: entry.name,
+                                          data_year: entry.year,
+                                          data_rank: entry.rank,
+                                        };
+
+                                        // INSERT TO DB2 LOGGER
+                                        db2.query(
+                                          "INSERT INTO logger_n2 SET ?",
+                                          db2Log,
+                                          (err, result) => {
+                                            if (!err) {
+                                              console.log("DB2 UPDATE LOGGED");
+                                            } else {
+                                              console.log(err);
+                                            }
+                                          }
+                                        );
+                                      } else {
+                                        console.log(err);
+                                      }
+                                    }
+                                  );
+                                } else {
+                                  console.log(err);
+                                }
+                              }
+                            );
+                          } else {
+                            console.log(err);
+                          }
+                        }
+                      );
+                    } else {
+                      // DELETE FROM N2 (& INSERT TO N3 - TO BE DONE IN A DIFFERENT LOG CHECK)
+
+                      // DELETE FROM N2
+                      db2.query(
+                        "DELETE FROM movies WHERE id = ?",
+                        [entry.id],
+                        (err, result) => {
+                          if (!err) {
+                            // UPDATE TO LOGGER 1
+                            const updateLog = {
+                              target_node: r.target_node,
+                              operation: r.operation,
+                              change_node: r.change_node,
+                              is_replicated_n2: 1,
+                              is_replicated_n3: r.is_replicated_n3,
+                              data_id: entry.id,
+                              data_name: entry.name,
+                              data_year: entry.year,
+                              data_rank: entry.rank,
+                            };
+
+                            db1.query(
+                              "UPDATE logger_n1 SET ? WHERE log_id = ?",
+                              [updateLog, r.log_id],
+                              (err, result) => {
+                                if (!err) {
+                                  db2.query(
+                                    "SELECT MAX(log_id) FROM logger_n2",
+                                    (err, result) => {
+                                      if (!err) {
+                                        const maxLogID1 = result[0].maxID + 1;
+                                        const db2Log = {
+                                          log_id: maxLogID1,
+                                          target_node: r.target_node,
+                                          operation: r.operation,
+                                          change_node: r.change_node,
+                                          is_replicated: 1,
+                                          data_id: entry.id,
+                                          data_name: entry.name,
+                                          data_year: entry.year,
+                                          data_rank: entry.rank,
+                                        };
+
+                                        // INSERT TO LOGGER 2
+                                        db2.query(
+                                          "INSERT INTO logger_n2 SET ?",
+                                          db2Log,
+                                          (err, result) => {
+                                            if (!err) {
+                                              // CHECK IF DB3 IS ONLINE
+                                              db3.query(
+                                                "SELECT MAX(log_id) from logger_n3",
+                                                (err, result) => {
+                                                  if (!err) {
+                                                    // INSERT LOG TO DB3
+                                                    const maxLogID1 =
+                                                      result[0].maxID + 1;
+                                                    const db3Log = {
+                                                      log_id: maxLogID1,
+                                                      target_node:
+                                                        r.target_node,
+                                                      operation: r.operation,
+                                                      change_node:
+                                                        r.change_node,
+                                                      is_replicated: 1,
+                                                      data_id: entry.id,
+                                                      data_name: entry.name,
+                                                      data_year: entry.year,
+                                                      data_rank: entry.rank,
+                                                    };
+
+                                                    db3.query(
+                                                      "INSERT INTO logger_n3 SET ?",
+                                                      db3Log,
+                                                      (err, result) => {
+                                                        if (!err) {
+                                                          console.log(
+                                                            "Transfer from Node 2 to Node 3 complete"
+                                                          );
+                                                        } else {
+                                                          console.log(err);
+                                                        }
+                                                      }
+                                                    );
+                                                  } else {
+                                                    console.log(err);
+                                                  }
+                                                }
+                                              );
+                                            } else {
+                                              console.log(err);
+                                            }
+                                          }
+                                        );
+                                      } else {
+                                        console.log(err);
+                                      }
+                                    }
+                                  );
+                                } else {
+                                  console.log(err);
+                                }
+                              }
+                            );
+                          } else {
+                            console.log(err);
+                          }
+                        }
+                      );
+                    }
+                  }
+                }
+
+                itemsProcessed++;
+                if (itemsProcessed === result.length) {
+                  checkDb3Log(); // MOVE ON TO UPDATING DB3 LOG
+                }
+              }, 500);
+            });
+          } else {
+            // DB1 IS OFFLINE
+            console.log("Node 1 is idle");
+            checkDb3Log();
+          }
+        }
+      );
+    } else {
+      // DB2 IS OFFLINE
+      console.log("Node 2 is idle");
+      checkDb3Log();
+    }
+  });
+}
+
+// CHECK DB3 LOG AND UPDATE
+function checkDb3Log() {
+  // CHECKS IF DB3 IS ONLINE
+  db3.query("SELECT MAX(id) AS maxID FROM movies", (err, result) => {
+    if (!err) {
+      // DB3 IS ONLINE
+      // CHECK NODE 1 LOG
+      db1.query(
+        "SELECT * from logger_n1 WHERE is_replicated_n3 = 0",
+        (err, result) => {
+          if (!err) {
+            // DB1 IS ONLINE
+            result.forEach(function (r, index) {
+              setTimeout(() => {
+                const entry = {
+                  id: r.data_id,
+                  name: r.data_name,
+                  year: r.data_year,
+                  rank: r.data_rank,
+                };
+                // IF LOG OPERATION IS INSERT
+                if (r.operation == "INSERT") {
+                  if (r.target_node == "3") {
+                    // IF TARGET IS NODE 3
+                    // INSERT DATA TO DB3
+                    db3.query(
+                      "INSERT INTO movies SET ?",
+                      entry,
+                      (err, result) => {
+                        if (!err) {
+                          const updateLog = {
+                            target_node: r.target_node,
+                            operation: r.operation,
+                            change_node: r.change_node,
+                            is_replicated_n2: r.is_replicated_n2,
+                            is_replicated_n3: 1,
+                            data_id: entry.id,
+                            data_name: entry.name,
+                            data_year: entry.year,
+                            data_rank: entry.rank,
+                          };
+
+                          // UPDATE IS_REPLICATED VALUE FOR LOGS
+                          db1.query(
+                            "UPDATE logger_n1 SET ? WHERE log_id = ?",
+                            [updateLog, r.log_id],
+                            (err, result) => {
+                              if (!err) {
+                                db3.query(
+                                  "SELECT MAX(log_id) AS maxID FROM logger_n3",
+                                  (err, result) => {
+                                    if (!err) {
+                                      // INSERT DB3 LOGGER
+                                      const maxLogID1 = result[0].maxID + 1;
+                                      const db3Log = {
+                                        log_id: maxLogID1,
+                                        target_node: r.target_node,
+                                        operation: r.operation,
+                                        change_node: r.change_node,
+                                        is_replicated: 1,
+                                        data_id: entry.id,
+                                        data_name: entry.name,
+                                        data_year: entry.year,
+                                        data_rank: entry.rank,
+                                      };
+
+                                      db3.query(
+                                        "INSERT INTO logger_n3 SET ?",
+                                        db3log,
+                                        (err, result) => {
+                                          if (!err) {
+                                            console.log(
+                                              "Log entry has reflected in db3"
+                                            );
+                                          } else {
+                                            console.log(err);
+                                          }
+                                        }
+                                      );
+                                    } else {
+                                      console.log(err);
+                                    }
+                                  }
+                                );
+                              } else {
+                                console.log(err);
+                              }
+                            }
+                          );
+                        } else {
+                          console.log(err);
+                        }
+                      }
+                    );
+                  } else {
+                    // IF TARGET IS NOT NODE 3
+                    // UPDATE IS_REPLICATED VALUE FOR LOGS
+                    const updateLog = {
+                      target_node: r.target_node,
+                      operation: r.operation,
+                      change_node: r.change_node,
+                      is_replicated_n2: r.is_replicated_n2,
+                      is_replicated_n3: 1,
+                      data_id: entry.id,
+                      data_name: entry.name,
+                      data_year: entry.year,
+                      data_rank: entry.rank,
+                    };
+
+                    // UPDATE NODE 1 LOG
+                    db1.query(
+                      "UPDATE logger_n1 SET ? WHERE log_id = ?",
+                      [updateLog, r.log_id],
+                      (err, result) => {
+                        if (!err) {
+                          console.log(
+                            "DB3 updated Node 1 Log log_id: " + r.log_id
+                          );
+                        } else {
+                          console.log(err);
+                        }
+                      }
+                    );
+                  }
+                }
+                // IF LOG OPERATION IS DELETE
+                else if (r.operation == "DELETE") {
+                  if (r.target_node == "3") {
+                    // DELETE FROM DB3
+                    db3.query(
+                      "DELETE FROM movies WHERE id = ?",
+                      [entry.id],
+                      (err, result) => {
+                        if (!err) {
+                          if (!err) {
+                            const updateLog = {
+                              target_node: r.target_node,
+                              operation: r.operation,
+                              change_node: r.change_node,
+                              is_replicated_n2: r.is_replicated_n2,
+                              is_replicated_n3: 1,
+                              data_id: entry.id,
+                              data_name: entry.name,
+                              data_year: entry.year,
+                              data_rank: entry.rank,
+                            };
+
+                            // UPDATE IS_REPLICATED VALUE FOR LOGS
+                            db1.query(
+                              "UPDATE logger_n1 SET ? WHERE log_id = ?",
+                              [updateLog, r.log_id],
+                              (err, result) => {
+                                if (!err) {
+                                  db3.query(
+                                    "SELECT MAX(log_id) AS maxID FROM logger_n3",
+                                    (err, result) => {
+                                      if (!err) {
+                                        const maxLogID1 = result[0].maxID + 1;
+                                        const db3Log = {
+                                          log_id: maxLogID1,
+                                          target_node: r.target_node,
+                                          operation: r.operation,
+                                          change_node: r.change_node,
+                                          is_replicated: 1,
+                                          data_id: entry.id,
+                                          data_name: entry.name,
+                                          data_year: entry.year,
+                                          data_rank: entry.rank,
+                                        };
+                                        // INSERT TO DB3 LOGGER
+                                        db3.query(
+                                          "INSERT INTO logger_n3 SET ?",
+                                          db3Log,
+                                          (err, result) => {
+                                            if (!err) {
+                                              console.log(
+                                                "Log entry has reflected in db3"
+                                              );
+                                            } else {
+                                              console.log(err);
+                                            }
+                                          }
+                                        );
+                                      } else {
+                                        console.log(err);
+                                      }
+                                    }
+                                  );
+                                } else {
+                                  console.log(err);
+                                }
+                              }
+                            );
+                          }
+                        } else {
+                          console.log(err);
+                        }
+                      }
+                    );
+                  } else {
+                    // IF TARGET IS NOT NODE 3
+                    const updateLog = {
+                      target_node: r.target_node,
+                      operation: r.operation,
+                      change_node: r.change_node,
+                      is_replicated_n2: r.is_replicated_n2,
+                      is_replicated_n3: 1,
+                      data_id: entry.id,
+                      data_name: entry.name,
+                      data_year: entry.year,
+                      data_rank: entry.rank,
+                    };
+
+                    // UPDATE IS_REPLICATED VALUE FOR LOGS
+                    db1.query(
+                      "UPDATE logger_n1 SET ? WHERE log_id = ?",
+                      [updateLog, r.log_id],
+                      (err, result) => {
+                        if (!err) {
+                          console.log("DB1 log updated log_id: " + r.log_id);
+                        } else {
+                          console.log(err);
+                        }
+                      }
+                    );
+                  }
+                }
+                // IF LOG OPERATION IS UPDATE
+                else {
+                  if (r.change_node == 0) {
+                    // NO TRANSFER UPDATE
+                    if (r.target_node == "3") {
+                      // UPDATE DB3
+                      db3.query(
+                        "UPDATE movies SET ? WHERE id = ?",
+                        [entry, r.id],
+                        (err, result) => {
+                          if (!err) {
+                            const updateLog = {
+                              target_node: r.targetNode,
+                              operation: r.operation,
+                              change_node: r.change_node,
+                              is_replicated_n2: r.is_replicated_n2,
+                              is_replicated_n3: 1,
+                              data_id: entry.id,
+                              data_name: entry.name,
+                              data_year: entry.year,
+                              data_rank: entry.rank,
+                            };
+
+                            // UPDATE IS_REPLICATED VALUE FOR LOGS1
+                            db1.query(
+                              "UPDATE logger_n1 SET ? WHERE log_id = ?",
+                              [updateLog, r.log_id],
+                              (err, result) => {
+                                if (!err) {
+                                  db3.query(
+                                    "SELECT MAX(log_id) FROM logger_n3",
+                                    (err, result) => {
+                                      if (!err) {
+                                        const maxLogID1 = result[0].maxID + 1;
+                                        const db3Log = {
+                                          log_id: maxLogID1,
+                                          target_node: r.target_node,
+                                          operation: r.operation,
+                                          change_node: r.change_node,
+                                          is_replicated: 1,
+                                          data_id: entry.id,
+                                          data_name: entry.name,
+                                          data_year: entry.year,
+                                          data_rank: entry.rank,
+                                        };
+                                        // INSERT INTO DB3 LOGGER
+                                        db3.query(
+                                          "INSERT INTO logger_n3 SET ?",
+                                          db3Log,
+                                          (err, result) => {
+                                            if (!err) {
+                                              console.log(
+                                                "Log entry has reflected in db3"
+                                              );
+                                            } else {
+                                              console.log(err);
+                                            }
+                                          }
+                                        );
+                                      } else {
+                                        console.log(err);
+                                      }
+                                    }
+                                  );
+                                } else {
+                                  console.log(err);
+                                }
+                              }
+                            );
+                          } else {
+                            console.log(err);
+                          }
+                        }
+                      );
+                    } else {
+                      // IF TARGET IS NOT NODE 3
+                      // UPDATE IS_REPLICATED VALUE FOR LOGS
+                      const updateLog = {
+                        target_node: r.target_node,
+                        operation: r.operation,
+                        change_node: r.change_node,
+                        is_replicated_n2: r.is_replicated_n2,
+                        is_replicated_n3: 1,
+                        data_id: entry.id,
+                        data_name: entry.name,
+                        data_year: entry.year,
+                        data_rank: entry.rank,
+                      };
+
+                      // UPDATE NODE 1 LOG
+                      db1.query(
+                        "UPDATE logger_n1 SET ? WHERE log_id = ?",
+                        [updateLog, r.log_id],
+                        (err, result) => {
+                          if (!err) {
+                            console.log(
+                              "DB3 updated Node 1 Log log_id: " + r.log_id
+                            );
+                          } else {
+                            console.log(err);
+                          }
+                        }
+                      );
+                    }
+                  } else {
+                    // TRANSFER NEEDED
+                    if (r.target_node == "3") {
+                      // INSERT TO N3 (& DELETE FROM N2 - TO BE DONE IN A DIFFERENT LOG CHECK)
+                      // INSERT DATA TO NODE 3
+                      db3.query(
+                        "INSERT INTO movies SET ? WHERE id = ?",
+                        [entry, r.id],
+                        (err, result) => {
+                          if (!err) {
+                            const updateLog = {
+                              target_node: r.target_node,
+                              operation: r.operation,
+                              change_node: r.change_node,
+                              is_replicated_n2: r.is_replicated_n2,
+                              is_replicated_n3: 1,
+                              data_id: entry.id,
+                              data_name: entry.name,
+                              data_year: entry.year,
+                              data_rank: entry.rank,
+                            };
+                            // UPDATE IS_REPLICATED DATA IN DB1
+                            db1.query(
+                              "UPDATE logger_n1 SET ? WHERE log_id = ?",
+                              [updateLog, r.log_id],
+                              (err, result) => {
+                                if (!err) {
+                                  db3.query(
+                                    "SELECT MAX(log_id) AS maxID FROM logger_n3",
+                                    (err, result) => {
+                                      if (!err) {
+                                        const maxLogID1 = result[0].maxID + 1;
+                                        const db3Log = {
+                                          log_id: maxLogID1,
+                                          target_node: r.target_node,
+                                          operation: r.operation,
+                                          change_node: r.change_node,
+                                          is_replicated: 1,
+                                          data_id: entry.id,
+                                          data_name: entry.name,
+                                          data_year: entry.year,
+                                          data_rank: entry.rank,
+                                        };
+
+                                        // INSERT TO DB3 LOGGER
+                                        db3.query(
+                                          "INSERT INTO logger_n3 SET ?",
+                                          db3Log,
+                                          (err, result) => {
+                                            if (!err) {
+                                              console.log("DB3 UPDATE LOGGED");
+                                            } else {
+                                              console.log(err);
+                                            }
+                                          }
+                                        );
+                                      } else {
+                                        console.log(err);
+                                      }
+                                    }
+                                  );
+                                } else {
+                                  console.log(err);
+                                }
+                              }
+                            );
+                          } else {
+                            console.log(err);
+                          }
+                        }
+                      );
+                    } else {
+                      // DELETE FROM N3 (& INSERT TO N2 - TO BE DONE IN A DIFFERENT LOG CHECK)
+
+                      // DELETE FROM N3
+                      db3.query(
+                        "DELETE FROM movies WHERE id = ?",
+                        [entry.id],
+                        (err, result) => {
+                          if (!err) {
+                            // UPDATE TO LOGGER 1
+                            const updateLog = {
+                              target_node: r.target_node,
+                              operation: r.operation,
+                              change_node: r.change_node,
+                              is_replicated_n2: r.is_replicated_n2,
+                              is_replicated_n3: 1,
+                              data_id: entry.id,
+                              data_name: entry.name,
+                              data_year: entry.year,
+                              data_rank: entry.rank,
+                            };
+
+                            db1.query(
+                              "UPDATE logger_n1 SET ? WHERE log_id = ?",
+                              [updateLog, r.log_id],
+                              (err, result) => {
+                                if (!err) {
+                                  db3.query(
+                                    "SELECT MAX(log_id) FROM logger_n3",
+                                    (err, result) => {
+                                      if (!err) {
+                                        const maxLogID1 = result[0].maxID + 1;
+                                        const db3Log = {
+                                          log_id: maxLogID1,
+                                          target_node: r.target_node,
+                                          operation: r.operation,
+                                          change_node: r.change_node,
+                                          is_replicated: 1,
+                                          data_id: entry.id,
+                                          data_name: entry.name,
+                                          data_year: entry.year,
+                                          data_rank: entry.rank,
+                                        };
+
+                                        // INSERT TO LOGGER 3
+                                        db3.query(
+                                          "INSERT INTO logger_n3 SET ?",
+                                          db3log,
+                                          (err, result) => {
+                                            if (!err) {
+                                              // CHECK IF DB2 IS ONLINE
+                                              db2.query(
+                                                "SELECT MAX(log_id) from logger_n2",
+                                                (err, result) => {
+                                                  if (!err) {
+                                                    // INSERT LOG TO DB2
+                                                    const maxLogID1 =
+                                                      result[0].maxID + 1;
+                                                    const db2Log = {
+                                                      log_id: maxLogID1,
+                                                      target_node:
+                                                        r.target_node,
+                                                      operation: r.operation,
+                                                      change_node:
+                                                        r.change_node,
+                                                      is_replicated: 1,
+                                                      data_id: entry.id,
+                                                      data_name: entry.name,
+                                                      data_year: entry.year,
+                                                      data_rank: entry.rank,
+                                                    };
+
+                                                    db2.query(
+                                                      "INSERT INTO logger_n2 SET ?",
+                                                      db2Log,
+                                                      (err, result) => {
+                                                        if (!err) {
+                                                          console.log(
+                                                            "Transfer from Node 3 to Node 2 complete"
+                                                          );
+                                                        } else {
+                                                          console.log(err);
+                                                        }
+                                                      }
+                                                    );
+                                                  } else {
+                                                    console.log(err);
+                                                  }
+                                                }
+                                              );
+                                            } else {
+                                              console.log(err);
+                                            }
+                                          }
+                                        );
+                                      } else {
+                                        console.log(err);
+                                      }
+                                    }
+                                  );
+                                } else {
+                                  console.log(err);
+                                }
+                              }
+                            );
+                          } else {
+                            console.log(err);
+                          }
+                        }
+                      );
+                    }
+                  }
+                }
+              }, 500);
+            });
+          } else {
+            // DB1 IS OFFLINE
+            console.log("Node 1 is idle");
+          }
+        }
+      );
+    } else {
+      // DB3 IS OFFLINE
+      console.log("Node 3 is idle");
+    }
+  });
+}
+
+// LOADS INDEX PAGE
+function loadIndexPage(res) {
+  db1.query("SELECT * FROM movies ORDER BY id DESC", (err, movies) => {
+    if (!err) {
+      movies = movies.slice(0, 10);
+      res.render(`index`, { movies });
+    } else {
+      db2.query("SELECT * FROM movies", (err, movies1) => {
+        if (!err) {
+          db3.query("SELECT * FROM movies", (err, movies2) => {
+            if (!err) {
+              let movies = movies1.concat(movies2);
+              movies.sort(function (a, b) {
+                var id_a = a.id;
+                var id_b = b.id;
+
+                if (id_a < id_b) {
+                  return 1;
+                }
+                if (id_a > id_b) {
+                  return -1;
+                }
+                return 0;
+              });
+              movies = movies.slice(0, 10);
+              res.render(`index`, { movies });
+            }
+          });
+        }
+      });
+    }
+  });
+}
+
 const controller = {
   // Open index.hbs with movies
   getIndex: function (req, res) {
+    // CHECK DB1 LOG AND UPDATE
+    // CHECKS IF DB1 IS ONLINE
+    db1.query("SELECT MAX(id) AS maxID FROM movies", (err, result) => {
+      if (!err) {
+        // DB1 IS ONLINE
+        // CHECK NODE 2 LOG
+        db2.query(
+          "SELECT * from logger_n2 WHERE is_replicated = 0",
+          (err, result) => {
+            if (!err) {
+              // DB2 IS ONLINE
+              setTimeout(() => {
+                result.forEach(function (r, index) {
+                  const entry = {
+                    id: r.data_id,
+                    name: r.data_name,
+                    year: r.data_year,
+                    rank: r.data_rank,
+                  };
+
+                  if (r.operation == "INSERT") {
+                    db1.query(
+                      "INSERT INTO movies SET ?",
+                      entry,
+                      (err, result) => {
+                        if (!err) {
+                          db1.query(
+                            "SELECT MAX(log_id) AS maxID FROM logger_n1",
+                            (err, result) => {
+                              if (!err) {
+                                const maxLogID1 = result[0].maxID + 1;
+
+                                const addLog = {
+                                  log_id: maxLogID1,
+                                  target_node: r.target_node,
+                                  operation: r.operation,
+                                  change_node: r.change_node,
+                                  is_replicated_n2: 1,
+                                  is_replicated_n3: 0,
+                                  data_id: entry.id,
+                                  data_name: entry.name,
+                                  data_year: entry.year,
+                                  data_rank: entry.rank,
+                                };
+
+                                db1.query(
+                                  "INSERT INTO logger_n1 SET ?",
+                                  addLog,
+                                  (err, result) => {
+                                    if (!err) {
+                                      const updateLog = {
+                                        target_node: r.target_node,
+                                        operation: r.operation,
+                                        change_node: 0,
+                                        is_replicated: 1,
+                                        data_id: entry.id,
+                                        data_name: entry.name,
+                                        data_year: entry.year,
+                                        data_rank: entry.rank,
+                                      };
+
+                                      db2.query(
+                                        "UPDATE logger_n2 SET ? WHERE log_id = ?",
+                                        [updateLog, r.log_id],
+                                        (err, result) => {
+                                          if (!err) {
+                                            console.log(result);
+                                          } else {
+                                            console.log(err);
+                                          }
+                                        }
+                                      );
+                                    } else {
+                                      console.log(err);
+                                    }
+                                  }
+                                );
+                              } else {
+                                console.log(err);
+                              }
+                            }
+                          );
+                        } else {
+                          console.log(err);
+                        }
+                      }
+                    );
+                  } else if (r.operation == "DELETE") {
+                    db1.query(
+                      "DELETE FROM movies WHERE id = ?",
+                      [entry.id],
+                      (err, result) => {
+                        if (!err) {
+                          db1.query(
+                            "SELECT MAX(log_id) as maxID FROM logger_n1",
+                            (err, result) => {
+                              if (!err) {
+                                const maxLogID1 = result[0].maxID + 1;
+
+                                const addLog = {
+                                  log_id: maxLogID1,
+                                  target_node: r.target_node,
+                                  operation: r.operation,
+                                  change_node: r.change_node,
+                                  is_replicated_n2: 1,
+                                  is_replicated_n3: 0,
+                                  data_id: entry.id,
+                                  data_name: entry.name,
+                                  data_year: entry.year,
+                                  data_rank: entry.rank,
+                                };
+
+                                db1.query(
+                                  "INSERT INTO logger_n1 SET ?",
+                                  addLog,
+                                  (err, result) => {
+                                    if (!err) {
+                                      const updateLog = {
+                                        target_node: r.target_node,
+                                        operation: r.operation,
+                                        change_node: r.change_node,
+                                        is_replicated: 1,
+                                        data_id: entry.id,
+                                        data_name: entry.name,
+                                        data_year: entry.year,
+                                        data_rank: entry.rank,
+                                      };
+
+                                      db2.query(
+                                        "UPDATE logger_n2 SET ? WHERE log_id = ?",
+                                        [updateLog, r.log_id],
+                                        (err, result) => {
+                                          if (!err) {
+                                            console.log(result);
+                                          } else {
+                                            console.log(err);
+                                          }
+                                        }
+                                      );
+                                    } else {
+                                      console.log(err);
+                                    }
+                                  }
+                                );
+                              } else {
+                                console.log(err);
+                              }
+                            }
+                          );
+                        } else {
+                          console.log(err);
+                        }
+                      }
+                    );
+                  } else {
+                    // UPDATE OPERATION
+                    const updateEntry = {
+                      name: entry.name,
+                      year: entry.year,
+                      rank: entry.rank,
+                    };
+
+                    // check change_node
+                    // no change needed
+                    if (r.change_node == 0) {
+                      db1.query(
+                        "UPDATE movies SET ? WHERE id = ?",
+                        [updateEntry, entry.id],
+                        (err, result) => {
+                          if (!err) {
+                            db1.query(
+                              "SELECT MAX(log_id) as maxID FROM logger_n1",
+                              (err, result) => {
+                                if (!err) {
+                                  const maxLogID1 = result[0].maxID + 1;
+
+                                  const addLog = {
+                                    log_id: maxLogID1,
+                                    target_node: r.target_node,
+                                    operation: r.operation,
+                                    change_node: r.change_node,
+                                    is_replicated_n2: 1,
+                                    is_replicated_n3: 0,
+                                    data_id: r.data_id,
+                                    data_name: r.data_name,
+                                    data_year: r.data_year,
+                                    data_rank: r.data_rank,
+                                  };
+
+                                  db1.query(
+                                    "INSERT INTO logger_n1 SET ?",
+                                    addLog,
+                                    (err, result) => {
+                                      if (!err) {
+                                        const updateLog = {
+                                          target_node: r.target_node,
+                                          operation: r.operation,
+                                          change_node: r.change_node,
+                                          is_replicated: 1,
+                                          data_id: r.data_id,
+                                          data_name: r.data_name,
+                                          data_year: r.data_year,
+                                          data_rank: r.data_rank,
+                                        };
+
+                                        db2.query(
+                                          "UPDATE logger_n2 SET ? WHERE log_id = ?",
+                                          [updateLog, r.log_id],
+                                          (err, result) => {
+                                            if (!err) {
+                                              console.log(result);
+                                            } else {
+                                              console.log(err);
+                                            }
+                                          }
+                                        );
+                                      } else {
+                                        console.log(err);
+                                      }
+                                    }
+                                  );
+                                } else {
+                                  console.log(err);
+                                }
+                              }
+                            );
+                          } else {
+                            console.log(err);
+                          }
+                        }
+                      );
+                    }
+                    // change needed
+                    else {
+                      db1.query(
+                        "UPDATE movies SET ? WHERE id = ?",
+                        [updateEntry, entry.id],
+                        (err, result) => {
+                          if (!err) {
+                            db1.query(
+                              "SELECT MAX(log_id) AS maxID FROM logger_n1",
+                              (err, result) => {
+                                if (!err) {
+                                  const maxLogID1 = result[0].maxID + 1;
+
+                                  const addLog = {
+                                    log_id: maxLogID1,
+                                    target_node: r.target_node,
+                                    operation: r.operation,
+                                    change_node: r.change_node,
+                                    is_replicated_n2: 1,
+                                    is_replicated_n3: 0,
+                                    data_id: entry.id,
+                                    data_name: entry.name,
+                                    data_year: entry.year,
+                                    data_rank: entry.rank,
+                                  };
+
+                                  db1.query(
+                                    "INSERT INTO logger_n1 SET ?",
+                                    addLog,
+                                    (err, result) => {
+                                      if (!err) {
+                                        const updateLog = {
+                                          target_node: r.target_node,
+                                          operation: r.operation,
+                                          change_node: r.change_node,
+                                          is_replicated: 1,
+                                          data_id: entry.id,
+                                          data_name: entry.name,
+                                          data_year: entry.year,
+                                          data_rank: entry.rank,
+                                        };
+
+                                        db2.query(
+                                          "UPDATE logger_n2 SET ? WHERE log_id = ?",
+                                          [updateLog, r.log_id],
+                                          (err, result) => {
+                                            if (!err) {
+                                              const updateLog = {
+                                                target_node: r.target_node,
+                                                operation: r.operation,
+                                                change_node: r.change_node,
+                                                is_replicated: 1,
+                                                data_id: entry.id,
+                                                data_name: entry.name,
+                                                data_year: entry.year,
+                                                data_rank: entry.rank,
+                                              };
+
+                                              db3.query(
+                                                "UPDATE logger_n3 SET ? WHERE `target_node` = ?, `operation` = ?, `change_node` = ?, `is_replicated` = 0, `data_id` = ?, `data_name` = ?, `data_year` = ?, `data_rank` = ?",
+                                                [
+                                                  updateLog,
+                                                  r.target_node,
+                                                  r.operation,
+                                                  r.change_node,
+                                                  entry.id,
+                                                  entry.name,
+                                                  entry.year,
+                                                  entry.rank,
+                                                ],
+                                                (err, result) => {
+                                                  if (!err) {
+                                                    const updateLog1 = {
+                                                      target_node:
+                                                        r.target_node,
+                                                      operation: r.operation,
+                                                      change_node:
+                                                        r.change_node,
+                                                      is_replicated_n2: 1,
+                                                      is_replicated_n3: 1,
+                                                      data_id: entry.id,
+                                                      data_name: entry.name,
+                                                      data_year: entry.year,
+                                                      data_rank: entry.rank,
+                                                    };
+
+                                                    db1.query(
+                                                      "UPDATE logger_n1 SET ? WHERE log_id = ?",
+                                                      [updateLog1, maxLogID1],
+                                                      (err, result) => {
+                                                        if (!err) {
+                                                          console.log(result);
+                                                        } else {
+                                                          console.log(err);
+                                                        }
+                                                      }
+                                                    );
+                                                  } else {
+                                                    console.log(err);
+                                                  }
+                                                }
+                                              );
+                                            } else {
+                                              console.log(err);
+                                            }
+                                          }
+                                        );
+                                      } else {
+                                        console.log(err);
+                                      }
+                                    }
+                                  );
+                                } else {
+                                  console.log(err);
+                                }
+                              }
+                            );
+                          } else {
+                            console.log(err);
+                          }
+                        }
+                      );
+                    }
+                  }
+                });
+              }, 500);
+            } else {
+              // DB2 IS OFFLINE
+              console.log("Node 2 is idle.");
+              console.log(err);
+            }
+
+            // CHECK NODE 3 LOGS
+            db3.query(
+              "SELECT * FROM logger_n3 WHERE is_replicated = 0",
+              (err, result) => {
+                if (!err) {
+                  // DB3 IS ONLINE
+                  setTimeout(() => {
+                    result.forEach(function (r, index) {
+                      const entry = {
+                        id: r.data_id,
+                        name: r.data_name,
+                        year: r.data_year,
+                        rank: r.data_rank,
+                      };
+
+                      if (r.operation == "INSERT") {
+                        db1.query(
+                          "INSERT INTO movies SET ?",
+                          entry,
+                          (err, result) => {
+                            if (!err) {
+                              db1.query(
+                                "SELECT MAX(log_id) AS maxID from logger_n1",
+                                (err, result) => {
+                                  if (!err) {
+                                    const maxLogID1 = result[0].maxID + 1;
+
+                                    const addLog = {
+                                      log_id: maxLogID1,
+                                      target_node: r.target_node,
+                                      operation: r.operation,
+                                      change_node: r.change_node,
+                                      is_replicated_n2: 0,
+                                      is_replicated_n3: 1,
+                                      data_id: entry.id,
+                                      data_name: entry.name,
+                                      data_year: entry.year,
+                                      data_rank: entry.rank,
+                                    };
+
+                                    db1.query(
+                                      "INSERT INTO logger_n1 SET ?",
+                                      addLog,
+                                      (err, result) => {
+                                        if (!err) {
+                                          const updateLog = {
+                                            target_node: r.target_node,
+                                            operation: r.operation,
+                                            change_node: r.change_node,
+                                            is_replicated: 1,
+                                            data_id: entry.id,
+                                            data_name: entry.name,
+                                            data_year: entry.year,
+                                            data_rank: entry.rank,
+                                          };
+
+                                          db3.query(
+                                            "UPDATE logger_n3 SET ? WHERE log_id = ?",
+                                            [updateLog, r.log_id],
+                                            (err, result) => {
+                                              if (!err) {
+                                                console.log(result);
+                                                checkDb2Log();
+                                              } else {
+                                                console.log(err);
+                                              }
+                                            }
+                                          );
+                                        } else {
+                                          console.log(err);
+                                        }
+                                      }
+                                    );
+                                  } else {
+                                    console.log(err);
+                                  }
+                                }
+                              );
+                            } else {
+                              console.log(err);
+                            }
+                          }
+                        );
+                      } else if (r.operation == "DELETE") {
+                        db1.query(
+                          "DELETE FROM movies WHERE id = ?",
+                          [entry.id],
+                          (err, result) => {
+                            if (!err) {
+                              const maxLogID1 = result[0].maxID + 1;
+
+                              const addLog = {
+                                log_id: maxLogID1,
+                                target_node: "3",
+                                operation: "DELETE",
+                                change_node: 0,
+                                is_replicated_n2: 0,
+                                is_replicated_n3: 1,
+                                data_id: entry.id,
+                                data_name: entry.name,
+                                data_year: entry.year,
+                                data_rank: entry.rank,
+                              };
+
+                              db1.query(
+                                "INSERT INTO logger_n1 SET ?",
+                                addLog,
+                                (err, result) => {
+                                  if (!err) {
+                                    const updateLog = {
+                                      target_node: "3",
+                                      operation: "DELETE",
+                                      change_node: 0,
+                                      is_replicated: 1,
+                                      data_id: entry.id,
+                                      data_name: entry.name,
+                                      data_year: entry.year,
+                                      data_rank: entry.rank,
+                                    };
+
+                                    db3.query(
+                                      "UPDATE logger_n3 SET ? WHERE log_id = ?",
+                                      [updateLog, r.log_id],
+                                      (err, result) => {
+                                        if (!err) {
+                                          console.log(result);
+                                        } else {
+                                          console.log(err);
+                                        }
+                                      }
+                                    );
+                                  } else {
+                                    console.log(err);
+                                  }
+                                }
+                              );
+                            } else {
+                              console.log(err);
+                            }
+                          }
+                        );
+                      } else {
+                        // UPDATE OPERATION
+                        const updateEntry = {
+                          name: entry.name,
+                          year: entry.year,
+                          rank: entry.rank,
+                        };
+
+                        // check change_node
+                        // no change needed
+                        if (r.change_node == 0) {
+                          db1.query(
+                            "UPDATE movies SET ? WHERE id = ?",
+                            [updateEntry, entry.id],
+                            (err, result) => {
+                              if (!err) {
+                                db1.query(
+                                  "SELECT MAX(log_id) as maxID FROM logger_n1",
+                                  (err, result) => {
+                                    if (!err) {
+                                      const maxLogID1 = result[0].maxID + 1;
+
+                                      const addLog = {
+                                        log_id: maxLogID1,
+                                        target_node: r.target_node,
+                                        operation: r.operation,
+                                        change_node: r.change_node,
+                                        is_replicated_n2: 0,
+                                        is_replicated_n3: 1,
+                                        data_id: r.data_id,
+                                        data_name: r.data_name,
+                                        data_year: r.data_year,
+                                        data_rank: r.data_rank,
+                                      };
+
+                                      db1.query(
+                                        "INSERT INTO logger_n1 SET ?",
+                                        addLog,
+                                        (err, result) => {
+                                          if (!err) {
+                                            const updateLog = {
+                                              target_node: r.target_node,
+                                              operation: r.operation,
+                                              change_node: r.change_node,
+                                              is_replicated: 1,
+                                              data_id: r.data_id,
+                                              data_name: r.data_name,
+                                              data_year: r.data_year,
+                                              data_rank: r.data_rank,
+                                            };
+
+                                            db3.query(
+                                              "UPDATE logger_n3 SET ? WHERE log_id = ?",
+                                              [updateLog, r.log_id],
+                                              (err, result) => {
+                                                if (!err) {
+                                                  console.log(result);
+                                                } else {
+                                                  console.log(err);
+                                                }
+                                              }
+                                            );
+                                          } else {
+                                            console.log(err);
+                                          }
+                                        }
+                                      );
+                                    } else {
+                                      console.log(err);
+                                    }
+                                  }
+                                );
+                              } else {
+                                console.log(err);
+                              }
+                            }
+                          );
+                        }
+                        // change needed
+                        else {
+                          db1.query(
+                            "UPDATE movies SET ? WHERE id = ?",
+                            [updateEntry, entry.id],
+                            (err, result) => {
+                              if (!err) {
+                                db1.query(
+                                  "SELECT MAX(log_id) AS maxID FROM logger_n1",
+                                  (err, result) => {
+                                    if (!err) {
+                                      const maxLogID1 = result[0].maxID + 1;
+
+                                      const addLog = {
+                                        log_id: maxLogID1,
+                                        target_node: r.target_node,
+                                        operation: r.operation,
+                                        change_node: r.change_node,
+                                        is_replicated_n2: 0,
+                                        is_replicated_n3: 1,
+                                        data_id: entry.id,
+                                        data_name: entry.name,
+                                        data_year: entry.year,
+                                        data_rank: entry.rank,
+                                      };
+
+                                      db1.query(
+                                        "INSERT INTO logger_n1 SET ?",
+                                        addLog,
+                                        (err, result) => {
+                                          if (!err) {
+                                            const updateLog = {
+                                              target_node: r.target_node,
+                                              operation: r.operation,
+                                              change_node: r.change_node,
+                                              is_replicated: 1,
+                                              data_id: entry.id,
+                                              data_name: entry.name,
+                                              data_year: entry.year,
+                                              data_rank: entry.rank,
+                                            };
+
+                                            db3.query(
+                                              "UPDATE logger_n3 SET ? WHERE log_id = ?",
+                                              [updateLog, r.log_id],
+                                              (err, result) => {
+                                                if (!err) {
+                                                  const updateLog = {
+                                                    target_node: r.target_node,
+                                                    operation: r.operation,
+                                                    change_node: r.change_node,
+                                                    is_replicated: 1,
+                                                    data_id: entry.id,
+                                                    data_name: entry.name,
+                                                    data_year: entry.year,
+                                                    data_rank: entry.rank,
+                                                  };
+
+                                                  db2.query(
+                                                    "UPDATE logger_n2 SET ? WHERE `target_node` = ?, `operation` = ?, `change_node` = ?, `is_replicated` = 0, `data_id` = ?, `data_name` = ?, `data_year` = ?, `data_rank` = ?",
+                                                    [
+                                                      updateLog,
+                                                      r.target_node,
+                                                      r.operation,
+                                                      r.change_node,
+                                                      entry.id,
+                                                      entry.name,
+                                                      entry.year,
+                                                      entry.rank,
+                                                    ],
+                                                    (err, result) => {
+                                                      if (!err) {
+                                                        const updateLog1 = {
+                                                          target_node:
+                                                            r.target_node,
+                                                          operation:
+                                                            r.operation,
+                                                          change_node:
+                                                            r.change_node,
+                                                          is_replicated_n2: 1,
+                                                          is_replicated_n3: 1,
+                                                          data_id: entry.id,
+                                                          data_name: entry.name,
+                                                          data_year: entry.year,
+                                                          data_rank: entry.rank,
+                                                        };
+
+                                                        db1.query(
+                                                          "UPDATE logger_n1 SET ? WHERE log_id = ?",
+                                                          [
+                                                            updateLog1,
+                                                            maxLogID1,
+                                                          ],
+                                                          (err, result) => {
+                                                            if (!err) {
+                                                              console.log(
+                                                                result
+                                                              );
+                                                            } else {
+                                                              console.log(err);
+                                                            }
+                                                          }
+                                                        );
+                                                      } else {
+                                                        console.log(err);
+                                                      }
+                                                    }
+                                                  );
+                                                } else {
+                                                  console.log(err);
+                                                }
+                                              }
+                                            );
+                                          } else {
+                                            console.log(err);
+                                          }
+                                        }
+                                      );
+                                    } else {
+                                      console.log(err);
+                                    }
+                                  }
+                                );
+                              } else {
+                                console.log(err);
+                              }
+                            }
+                          );
+                        }
+                      }
+                    });
+
+                    checkDb2Log();
+                  }, 500);
+                } else {
+                  console.log(err);
+                  checkDb2Log();
+                }
+              }
+            );
+          }
+        );
+      } else {
+        // DB1 OFFLINE
+        console.log("Node 1 is idle.");
+        console.log(err);
+        checkDb2Log(); // MOVE ON TO UPDATING DB2 LOGS
+      }
+    });
+
     db1.query("SELECT * FROM movies ORDER BY id DESC", (err, movies) => {
       if (!err) {
         movies = movies.slice(0, 10);
