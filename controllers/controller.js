@@ -613,7 +613,7 @@ function checkDb3Log() {
 
                                       db3.query(
                                         "INSERT INTO logger_n3 SET ?",
-                                        db3log,
+                                        db3Log,
                                         (err, result) => {
                                           if (!err) {
                                             console.log(
@@ -994,7 +994,7 @@ function checkDb3Log() {
                                         // INSERT TO LOGGER 3
                                         db3.query(
                                           "INSERT INTO logger_n3 SET ?",
-                                          db3log,
+                                          db3Log,
                                           (err, result) => {
                                             if (!err) {
                                               // CHECK IF DB2 IS ONLINE
